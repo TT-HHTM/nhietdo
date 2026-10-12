@@ -399,4 +399,31 @@
 
                     let html = "";
                     limitedData.forEach(item => {
-                        html +=
+                        if (item.error) {
+                            html += `<div class="email-item" style="color: red;">Lỗi: ${item.error}</div>`;
+                        } else {
+                            html += `
+                                <div class="email-item">
+                                    <div class="email-time">${item.date || ''}</div>
+                                    <div class="email-subject">${item.subject || 'Không có tiêu đề'}</div>
+                                    <div><strong>Từ:</strong> ${item.sender || ''}</div>
+                                    <div style="color: #555; margin-top: 4px; white-space: pre-line;">${item.body || ''}</div>
+                                </div>
+                            `;
+                        }
+                    });
+                    container.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error("Lỗi khi tải nhật ký email:", error);
+                    container.innerHTML = "<p style='color: red;'>Không thể kết nối đến Google Apps Script. Vui lòng kiểm tra lại quyền triển khai Web App.</p>";
+                });
+        }
+
+        // Tự động tải nhật ký nhiệt độ khi vừa mở trang
+        document.addEventListener("DOMContentLoaded", () => {
+            fetchEmailLogs();
+        });
+    </script>
+</body>
+</html>
