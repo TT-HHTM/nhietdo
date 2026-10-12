@@ -309,10 +309,6 @@
         .email-item:last-child {
             border-bottom: none;
         }
-        .email-time {
-            color: #666;
-            font-size: 0.75em;
-        }
         .email-subject {
             font-weight: bold;
             color: var(--primary-color);
@@ -366,25 +362,25 @@
                 </table>
             </div>
 
-            <!-- Khung Nhật ký nhiệt độ đã được chuyển xuống đây -->
+            <!-- Khung Nhật ký nhiệt độ -->
             <div class="card email-panel" style="margin-top: 0;">
                 <h3>Nhật ký nhiệt độ</h3>
                 <button class="btn-info" onclick="fetchEmailLogs()">Làm mới Nhật ký nhiệt độ</button>
                 <div id="emailLogsContainer">
-                    <p>Đang tải danh sách nhật ký...</p>
+                    <p>Đang tải danh sách tiêu đề...</p>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // URL Google Apps Script Web App mới của bạn[cite: 2]
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzzl2WtZB33aBCNltF8ENaIGRS0JnLay6eZ1jLMs6iXPlroXS6RnNMa5waYniKlJtU/exec";
+        // URL Google Apps Script Web App mới
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYNBZvxX7oXEdQ6wlm7EDW2wnVjcR7x0DW7qTk_LSqruv8AWE8MlwHFiAKrOC44n9V/exec";
 
         // Hàm gọi lấy dữ liệu từ Google Apps Script
         function fetchEmailLogs() {
             const container = document.getElementById("emailLogsContainer");
-            container.innerHTML = "<p>Đang tải dữ liệu nhật ký...</p>";
+            container.innerHTML = "<p>Đang tải dữ liệu tiêu đề...</p>";
 
             fetch(APPS_SCRIPT_URL)
                 .then(response => response.json())
@@ -394,7 +390,7 @@
                         return;
                     }
 
-                    // Giới hạn chỉ lấy tối đa 2 nội dung (bản ghi) gần nhất[cite: 2]
+                    // Giới hạn chỉ lấy tối đa 2 bản ghi gần nhất[cite: 2]
                     const limitedData = data.slice(0, 2);
 
                     let html = "";
@@ -404,10 +400,7 @@
                         } else {
                             html += `
                                 <div class="email-item">
-                                    <div class="email-time">${item.date || ''}</div>
-                                    <div class="email-subject">${item.subject || 'Không có tiêu đề'}</div>
-                                    <div><strong>Từ:</strong> ${item.sender || ''}</div>
-                                    <div style="color: #555; margin-top: 4px; white-space: pre-line;">${item.body || ''}</div>
+                                    <div class="email-subject">📌 ${item.subject || 'Không có tiêu đề'}</div>
                                 </div>
                             `;
                         }
@@ -415,12 +408,12 @@
                     container.innerHTML = html;
                 })
                 .catch(error => {
-                    console.error("Lỗi khi tải nhật ký email:", error);
+                    console.error("Lỗi khi tải tiêu đề email:", error);
                     container.innerHTML = "<p style='color: red;'>Không thể kết nối đến Google Apps Script. Vui lòng kiểm tra lại quyền triển khai Web App.</p>";
                 });
         }
 
-        // Tự động tải nhật ký nhiệt độ khi vừa mở trang
+        // Tự động tải tiêu đề nhiệt độ khi mở trang
         document.addEventListener("DOMContentLoaded", () => {
             fetchEmailLogs();
         });
