@@ -329,7 +329,7 @@
     </div>
 
     <div class="container">
-        <!-- Khu vực chính: Hiển thị ngăn tủ & Thao tác -->
+        <!-- Khu vực chính: Hiển thị ngăn tủ & Thao tác (Cột trái) -->
         <div>
             <div class="card">
                 <h2>Trạng thái Tủ Lưu Trữ 36-TTB237</h2>
@@ -338,17 +338,9 @@
                     <p>Đang tải dữ liệu tủ...</p>
                 </div>
             </div>
-
-            <div class="card email-panel">
-                <h3>Nhật ký Email hệ thống (Tủ 36-TTB237)</h3>
-                <button class="btn-info" onclick="fetchEmailLogs()">Làm mới Nhật ký Email</button>
-                <div id="emailLogsContainer">
-                    <p>Đang tải danh sách email...</p>
-                </div>
-            </div>
         </div>
 
-        <!-- Khu vực phụ: Thống kê & Tìm kiếm nhanh -->
+        <!-- Khu vực phụ: Tìm kiếm, Thống kê kho & Nhật ký nhiệt độ (Cột phải) -->
         <div>
             <div class="card">
                 <h3>Tìm kiếm túi máu</h3>
@@ -373,23 +365,32 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Khung Nhật ký nhiệt độ đã được chuyển xuống đây -->
+            <div class="card email-panel" style="margin-top: 0;">
+                <h3>Nhật ký nhiệt độ</h3>
+                <button class="btn-info" onclick="fetchEmailLogs()">Làm mới Nhật ký nhiệt độ</button>
+                <div id="emailLogsContainer">
+                    <p>Đang tải danh sách nhật ký...</p>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
         // URL Google Apps Script Web App của bạn
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyAVueJKUH1NFFpuuDxehCIfUISaCratT2E1WbRf4zqD4geuZ4h86r53M8-DiamFVaf/exec";
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1EhYLI5nnSBD2qDE5UYmF8ylGdpwPrverC1JGGBhVGr32tLnkTq5QgeqG4fRROsmq/exec";
 
-        // Hàm gọi lấy dữ liệu email từ Google Apps Script
+        // Hàm gọi lấy dữ liệu từ Google Apps Script
         function fetchEmailLogs() {
             const container = document.getElementById("emailLogsContainer");
-            container.innerHTML = "<p>Đang tải dữ liệu email...</p>";
+            container.innerHTML = "<p>Đang tải dữ liệu nhật ký...</p>";
 
             fetch(APPS_SCRIPT_URL)
                 .then(response => response.json())
                 .then(data => {
                     if (!data || data.length === 0) {
-                        container.innerHTML = "<p>Không có bản ghi email nào.</p>";
+                        container.innerHTML = "<p>Không có bản ghi nhật ký nào.</p>";
                         return;
                     }
 
@@ -407,8 +408,8 @@
                     document.getElementById("syncStatus").innerText = "Đã đồng bộ thành công dữ liệu từ Google Sheets & Gmail.";
                 })
                 .catch(error => {
-                    console.error("Lỗi khi tải nhật ký email:", error);
-                    container.innerHTML = "<p style='color: red;'>Không thể tải dữ liệu email từ Apps Script.</p>";
+                    console.error("Lỗi khi tải nhật ký nhiệt độ:", error);
+                    container.innerHTML = "<p style='color: red;'>Không thể tải dữ liệu nhật ký từ Apps Script.</p>";
                     document.getElementById("syncStatus").innerText = "Lỗi kết nối đồng bộ!";
                 });
         }
@@ -426,7 +427,7 @@
             resultDiv.innerHTML = `<strong>Kết quả:</strong> Đang tra cứu mã "${code}" trong hệ thống kho...`;
         }
 
-        // Tự động tải nhật ký email khi trang vừa khởi chạy xong
+        // Tự động tải nhật ký nhiệt độ khi trang vừa khởi chạy xong
         window.onload = function() {
             fetchEmailLogs();
         };
