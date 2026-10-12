@@ -219,6 +219,20 @@
             background-color: #01579b;
         }
 
+        .btn-move-tray {
+            background-color: #f57c00;
+            color: white;
+            padding: 2px 6px;
+            font-size: 0.75em;
+            width: auto;
+            border-radius: 3px;
+            margin-left: 4px;
+            cursor: pointer;
+        }
+        .btn-move-tray:hover {
+            background-color: #e65100;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -244,266 +258,178 @@
             border-radius: 3px;
         }
 
+        .btn-move-single {
+            background-color: #fb8c00;
+            padding: 2px 5px;
+            font-size: 0.75em;
+            width: auto;
+            border-radius: 3px;
+            margin-right: 2px;
+        }
+
+        .btn-edit-single {
+            background-color: #0288d1;
+            padding: 2px 5px;
+            font-size: 0.75em;
+            width: auto;
+            border-radius: 3px;
+            margin-right: 2px;
+        }
+
         .stats-table th {
             background-color: #e0e0e0;
         }
 
-        /* --- KHUNG BẢNG ĐỌC EMAIL Ở GÓC PHẢI PHÍA TRÊN --- */
+        .search-result {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            border-radius: 4px;
+        }
+
+        .search-result.not-found {
+            background-color: #ffebee;
+            border-color: #ffcdd2;
+        }
+
+        /* --- KHUNG QUẢN LÝ EMAIL LOG --- */
         .email-panel {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 320px;
-            max-height: 420px;
-            background: #ffffff;
-            border: 2px solid var(--primary-color);
+            margin-top: 20px;
+            background: #fff;
+            padding: 15px;
             border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.25);
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        .email-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
             font-size: 0.85em;
         }
-
-        .email-panel-header {
-            background: var(--primary-color);
-            color: white;
-            padding: 8px 12px;
-            font-weight: bold;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .email-item:last-child {
+            border-bottom: none;
         }
-
-        .email-panel-body {
-            padding: 10px;
-            overflow-y: auto;
-            max-height: 360px;
-            background: #fafafa;
+        .email-time {
+            color: #666;
+            font-size: 0.75em;
         }
-
-        .email-item {
-            background: #fff;
-            border: 1px solid #ddd;
-            border-left: 4px solid var(--secondary-color);
-            border-radius: 4px;
-            padding: 8px;
-            margin-bottom: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-
         .email-subject {
             font-weight: bold;
-            color: #d32f2f;
-            margin-bottom: 2px;
-        }
-
-        .email-meta {
-            font-size: 0.75em;
-            color: #666;
-            margin-bottom: 4px;
-        }
-
-        .email-snippet {
-            font-size: 0.8em;
-            color: #444;
-            white-space: pre-line;
-            max-height: 60px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .email-empty {
-            text-align: center;
-            color: #888;
-            padding: 20px;
-            font-style: italic;
+            color: var(--primary-color);
         }
     </style>
 </head>
 <body>
 
-    <!-- BẢNG ĐỌC EMAIL Ở GÓC PHẢI PHÍA TRÊN MÀN HÌNH -->
-    <div class="email-panel" id="emailPanel">
-        <div class="email-panel-header">
-            <span>📩 Hộp Thư Đến Gần Đây</span>
-            <span id="emailCountBadge" style="background: rgba(255,255,255,0.3); padding: 2px 6px; border-radius: 10px; font-size: 0.75em;">0</span>
-        </div>
-        <div class="email-panel-body" id="emailPanelBody">
-            <div class="email-empty">Đang tải dữ liệu email...</div>
-        </div>
-    </div>
+    <a href="#" class="btn-back-menu">⬅ Menu</a>
 
     <div class="header">
-        <a href="index.html" class="btn-back-menu">⬅ TRỞ VỀ MENU</a>
-        <h1>HỆ THỐNG PHẦN MỀM QUẢN LÝ KHO THÔ (36-TTB237)</h1>
-        <div id="syncStatus" class="sync-status">🟢 Đang hoạt động bình thường...</div>
+        <h1>QUẢN LÝ TỦ LƯU TRỮ MÁU - TTB237</h1>
+        <div class="sync-status" id="syncStatus">Đang kết nối hệ thống...</div>
     </div>
 
     <div class="container">
-        <div class="main-content">
+        <!-- Khu vực chính: Hiển thị ngăn tủ & Thao tác -->
+        <div>
             <div class="card">
-                <h3>Nhập Liệu Túi Máu Vào Hàng Khay</h3>
-                <form id="addBloodForm" style="display: grid; grid-template-columns: repeat(9, 1fr) 90px; gap: 8px; align-items: end;">
-                    <div class="form-group">
-                        <label>Vị trí Ngăn</label>
-                        <select id="selectNgan" required></select>
-                    </div>
-                    <div class="form-group">
-                        <label>Hàng Khay</label>
-                        <select id="selectHang" required>
-                            <option value="1">Hàng 1</option>
-                            <option value="2">Hàng 2</option>
-                            <option value="3">Hàng 3</option>
-                            <option value="4">Hàng 4</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Barcode Khay</label>
-                        <input type="text" id="barcodeKhay" placeholder="Mã khay..." value="" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Barcode Túi</label>
-                        <input type="text" id="barcodeTui" placeholder="Mã túi máu..." required>
-                    </div>
-                    <div class="form-group">
-                        <label>Nhóm Máu</label>
-                        <select id="nhomMau" required>
-                            <option value="O">O</option>
-                            <option value="A">A</option>
-                            <option value="B">B</option>
-                            <option value="AB">AB</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Yếu Tố Rh</label>
-                        <select id="rhFactor" required>
-                            <option value="Rh+">Rh(+)</option>
-                            <option value="Rh-">Rh(-)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Dung Tích</label>
-                        <select id="dungTich" required>
-                            <option value="250">250 ml</option>
-                            <option value="350">350 ml</option>
-                            <option value="450">450 ml</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Ngày Nhập</label>
-                        <input type="date" id="ngayNhap" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Hạn Sử Dụng</label>
-                        <input type="date" id="hanSuDung" readonly style="background-color: #e9ecef;">
-                    </div>
-                    <div class="form-group">
-                        <button type="submit" style="height: 36px;">Thêm</button>
-                    </div>
-                </form>
+                <h2>Trạng thái Tủ Lưu Trữ 36-TTB237</h2>
+                <div id="compartmentsContainer">
+                    <!-- Nội dung các ngăn tủ sẽ được render động tại đây -->
+                    <p>Đang tải dữ liệu tủ...</p>
+                </div>
             </div>
 
-            <div class="grid-layout">
-                <div class="column-container" id="leftColumn">
-                    <div class="column-title">CỘT BÊN TRÁI (NGĂN 1 - 6)</div>
-                </div>
-                <div class="column-container" id="rightColumn">
-                    <div class="column-title">CỘT BÊN PHẢI (NGĂN 7 - 12)</div>
+            <div class="card email-panel">
+                <h3>Nhật ký Email hệ thống (Tủ 36-TTB237)</h3>
+                <button class="btn-info" onclick="fetchEmailLogs()">Làm mới Nhật ký Email</button>
+                <div id="emailLogsContainer">
+                    <p>Đang tải danh sách email...</p>
                 </div>
             </div>
         </div>
 
-        <div class="sidebar">
+        <!-- Khu vực phụ: Thống kê & Tìm kiếm nhanh -->
+        <div>
             <div class="card">
-                <h3>Quản Lý Dữ Liệu</h3>
-                <button class="btn-success" onclick="exportToExcel()">📊 Xuất Excel</button>
-                <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="importFromExcel(event)">
-                <button class="btn-info" onclick="document.getElementById('excelFileInput').click()">📥 Nhập File Excel</button>
-                <button class="btn-clear-all" onclick="clearAllData()">🗑 Xóa Tất Cả Dữ Liệu Kho</button>
+                <h3>Tìm kiếm túi máu</h3>
+                <div class="form-group">
+                    <label for="searchCode">Mã túi máu / Số serial:</label>
+                    <input type="text" id="searchCode" placeholder="Nhập mã túi máu...">
+                </div>
+                <button onclick="searchBloodBag()">Tìm kiếm</button>
+                <div id="searchResult" style="display: none;"></div>
             </div>
 
             <div class="card">
-                <h3>Thống Kê Kho Máu</h3>
+                <h3>Thống kê kho</h3>
                 <table class="stats-table">
-                    <thead>
-                        <tr>
-                            <th>Nhóm / Rh</th>
-                            <th>250ml</th>
-                            <th>350ml</th>
-                            <th>450ml</th>
-                            <th>Tổng</th>
-                        </tr>
-                    </thead>
-                    <tbody id="statsBody"></tbody>
+                    <tr>
+                        <th>Nhóm máu</th>
+                        <th>Thể tích</th>
+                        <th>Số lượng</th>
+                    </tr>
+                    <tbody id="statsBody">
+                        <tr><td colspan="3">Đang cập nhật...</td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
     </div>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            // --- ĐƯỜNG DẪN WEB APP GOOGLE APPS SCRIPT ---
-            const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyrH5UdwGKW0rxGGw52b6NtrrH0jvlV8aDcbdD1S1d2CMk3l36lQAnayQn1kE2DY8KD/exec";
+        // URL Google Apps Script Web App của bạn
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1EhYLI5nnSBD2qDE5UYmF8ylGdpwPrverC1JGGBhVGr32tLnkTq5QgeqG4fRROsmq/exec";
 
-            function fetchEmailsForPanel() {
-                if (!APPS_SCRIPT_WEB_APP_URL) return;
+        // Hàm gọi lấy dữ liệu email từ Google Apps Script
+        function fetchEmailLogs() {
+            const container = document.getElementById("emailLogsContainer");
+            container.innerHTML = "<p>Đang tải dữ liệu email...</p>";
 
-                fetch(APPS_SCRIPT_WEB_APP_URL)
-                    .then(response => response.json())
-                    .then(data => {
-                        renderEmailPanel(data);
-                    })
-                    .catch(err => {
-                        console.log("Không thể kết nối lấy email:", err);
+            fetch(APPS_SCRIPT_URL)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data || data.length === 0) {
+                        container.innerHTML = "<p>Không có bản ghi email nào.</p>";
+                        return;
+                    }
+
+                    let html = "";
+                    data.forEach(item => {
+                        html += `
+                            <div class="email-item">
+                                <div class="email-time">${item.date} - Gửi từ: ${item.sender}</div>
+                                <div class="email-subject">${item.subject}</div>
+                                <div class="email-body" style="font-size: 0.8em; color: #444; max-height: 60px; overflow: hidden; text-overflow: ellipsis;">${item.body}</div>
+                            </div>
+                        `;
                     });
-            }
-
-            function renderEmailPanel(emails) {
-                const panelBody = document.getElementById('emailPanelBody');
-                const countBadge = document.getElementById('emailCountBadge');
-                
-                if (!emails || emails.length === 0) {
-                    countBadge.textContent = "0";
-                    panelBody.innerHTML = '<div class="email-empty">Chưa có email mới nào.</div>';
-                    return;
-                }
-
-                countBadge.textContent = emails.length;
-                let html = '';
-                emails.forEach(email => {
-                    html += `
-                        <div class="email-item">
-                            <div class="email-subject">${escapeHtml(email.subject || 'Không có tiêu đề')}</div>
-                            <div class="email-meta">Từ: <b>${escapeHtml(email.sender || 'Ẩn danh')}</b> | ${escapeHtml(email.date || '')}</div>
-                            <div class="email-snippet">${escapeHtml(email.body || '')}</div>
-                        </div>
-                    `;
+                    container.innerHTML = html;
+                    document.getElementById("syncStatus").innerText = "Đã đồng bộ thành công dữ liệu từ Google Sheets & Gmail.";
+                })
+                .catch(error => {
+                    console.error("Lỗi khi tải nhật ký email:", error);
+                    container.innerHTML = "<p style='color: red;'>Không thể tải dữ liệu email từ Apps Script.</p>";
+                    document.getElementById("syncStatus").innerText = "Lỗi kết nối đồng bộ!";
                 });
-                panelBody.innerHTML = html;
+        }
+
+        // Các hàm giao diện tạm thời / cơ sở cho hệ thống kho máu
+        function searchBloodBag() {
+            const code = document.getElementById("searchCode").value.trim();
+            const resultDiv = document.getElementById("searchResult");
+            if (!code) {
+                alert("Vui lòng nhập mã túi máu cần tìm!");
+                return;
             }
+            resultDiv.style.display = "block";
+            resultDiv.className = "search-result";
+            resultDiv.innerHTML = `<strong>Kết quả:</strong> Đang tra cứu mã "${code}" trong hệ thống kho...`;
+        }
 
-            function escapeHtml(text) {
-                if (!text) return '';
-                return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-            }
-
-            // Tải email lần đầu và lặp lại mỗi 15 giây
-            fetchEmailsForPanel();
-            setInterval(fetchEmailsForPanel, 15000);
-
-            // --- QUẢN LÝ KHO MÁU ---
-            const totalNgan = 12;
-            const totalRows = 4;
-            let inventory = JSON.parse(localStorage.getItem('kho_ttb237_data')) || initInventory();
-
-            const todayStr = new Date().toISOString().split('T')[0];
-            const ngayNhapEl = document.getElementById('ngayNhap');
-            const hanSuDungEl = document.getElementById('hanSuDung');
-
-            if (ngayNhapEl) ngayNhapEl.value = todayStr;
-
-            function addDays(dateStr, days) {
-                if (!dateStr) return '';
-                const date = new
+        // Tự động tải nhật ký email khi trang vừa khởi chạy xong
+        window.onload = function() {
+            fetchEmailLogs();
+        };
+    </script>
+</body>
+</html>
