@@ -212,12 +212,12 @@
     <!-- PHẦN TRÊN: KHO THÔ -->
     <h2 class="section-title kho-tho">📦 Kho Thô</h2>
     <div class="grid-container">
-        <!-- Tủ TTB237 (Cũ) -->
+        <!-- Tủ TTB237 -->
         <div class="card tho" id="cabinet-36-TTB237">
             <div>
                 <div class="card-icon">❄️</div>
                 <h2>Tủ Lạnh 36-TTB237</h2>
-                <p>Hệ thống quản lý quy mô lớn gồm <b>12 ngăn chứa</b> .</p>
+                <p>Hệ thống quản lý quy mô lớn gồm <b>12 ngăn chứa</b>.</p>
             </div>
             <div>
                 <a href="237FN.html" class="btn tho">Truy Cập Tủ 36-TTB237 &rarr;</a>
@@ -241,12 +241,12 @@
             </div>
         </div>
 
-        <!-- Tủ TTB25 (Cũ) -->
+        <!-- Tủ TTB25 -->
         <div class="card tho" id="cabinet-36-TTB25">
             <div>
                 <div class="card-icon">🧊</div>
                 <h2>Tủ Lạnh 36-TTB25</h2>
-                <p>Hệ thống quản lý quy mô vừa gồm <b>6 ngăn chứa</b> .</p>
+                <p>Hệ thống quản lý quy mô vừa gồm <b>6 ngăn chứa</b>.</p>
             </div>
             <div>
                 <a href="25FN.html" class="btn tho">Truy Cập Tủ 36-TTB25 &rarr;</a>
@@ -270,7 +270,7 @@
             </div>
         </div>
 
-        <!-- Tủ TTB23 (Mới) -->
+        <!-- Tủ TTB23 -->
         <div class="card tho" id="cabinet-36-TTB23">
             <div>
                 <div class="card-icon">🌡️</div>
@@ -299,12 +299,12 @@
             </div>
         </div>
 
-        <!-- Tủ TTB236 (Mới) -->
+        <!-- Tủ TTB236 -->
         <div class="card tho" id="cabinet-36-TTB236">
             <div>
                 <div class="card-icon">❄️</div>
                 <h2>Tủ Lạnh 36-TTB236</h2>
-                <p>Hệ thống phần mềm quản lý kho thô gồm <b>12 ngăn chứa</b> </p>
+                <p>Hệ thống phần mềm quản lý kho thô gồm <b>12 ngăn chứa</b>.</p>
             </div>
             <div>
                 <a href="236FN.html" class="btn tho">Truy Cập Tủ 36-TTB236 &rarr;</a>
@@ -365,7 +365,7 @@
         <div class="card sach" id="cabinet-36-TTB236-Sach">
             <div>
                 <div class="card-icon">❄️</div>
-                <h2>Tủ Lạnh 36-TTB236</h2>
+                <h2>Tủ Lạnh 36-TTB236 (Sạch)</h2>
                 <p>Hệ thống phần mềm quản lý kho sạch gồm <b>12 ngăn chứa</b> (6 trái, 6 phải) với 3 hàng khay mỗi ngăn.</p>
             </div>
             <div>
@@ -395,9 +395,9 @@
         <p>&copy; Hệ Thống Phần Mềm Quản Lý Kho Máu - Trung Tâm Máu</p>
     </footer>
 
-    <!-- Script kết nối tự động lấy dữ liệu từ Google Apps Script -->
+    <!-- Script kết nối tự động lấy dữ liệu từ Google Apps Script mới -->
     <script>
-        const APP_SCRIPT_URL = "hhttps://script.google.com/macros/s/AKfycbyBSgrxr6dw7XOidQiS8UoAYJyxYQ7TXgrXesbszoKSEd4RO1pPkylUOsql3FcP-_JbBg/exec";
+        const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx1Cz2TIpI-vEH-qDOfYu76-M4v9uaf4lttzTFLPSQLEtCI1vhrMFpvhRG5qSjiEvkxlg/exec";
 
         async function fetchTemperatureData() {
             try {
@@ -412,6 +412,17 @@
 
                         if (titleEl) titleEl.innerText = data[code].title;
                         if (timeEl) timeEl.innerText = data[code].time;
+                    }
+
+                    if (code === '36-TTB236') {
+                        let cardSachElement = document.getElementById('cabinet-36-TTB236-Sach');
+                        if (cardSachElement) {
+                            let titleEl = cardSachElement.querySelector('.mail-title');
+                            let timeEl = cardSachElement.querySelector('.mail-time');
+
+                            if (titleEl) titleEl.innerText = data[code].title;
+                            if (timeEl) timeEl.innerText = data[code].time;
+                        }
                     }
                 }
             } catch (error) {
