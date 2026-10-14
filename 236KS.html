@@ -450,7 +450,7 @@
             })
             .subscribe();
 
-        // Thêm nhanh mã Barcode vào kho (Sử dụng upsert để ghi đè/cập nhật vị trí nếu mã đã tồn tại)
+        // Thêm nhanh mã Barcode vào kho (Sử dụng upsert để cập nhật lại trạng thái available nếu túi cũ đã xuất và đưa trở lại kho)
         document.getElementById('addBloodForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const nganId = document.getElementById('selectNgan').value;
@@ -495,7 +495,7 @@
             loadDataFromSupabase();
         });
 
-        // Hàm ghi log lịch sử xuất kho lên bảng checkout_logs và xóa khỏi kho hiện tại
+        // Hàm ghi log lịch sử xuất kho và chuyển trạng thái thành 'exported' (đã xuất) thay vì xóa hẳn
         async function checkoutItemAndLog(item) {
             // 1. Lưu vào bảng lịch sử xuất kho
             await _supabase.from('checkout_logs').insert([{
@@ -507,9 +507,9 @@
                 han_su_dung: item.hanSuDung
             }]);
 
-            // 2. Cập nhật trạng thái hoặc xóa khỏi bảng blood_units
+            // 2. Cập nhật status thành 'exported' trong bảng blood_units để lưu lại thông tin đã xuất
             if (item.id) {
-                await _supabase.from('blood_units').delete().eq('id', item.id);
+                await _supabase.from('blood_units').update({ status: 'exported' }).eq('id', item.id);
             }
         }
 
@@ -519,7 +519,7 @@
             if (confirm(`Xác nhận xuất túi máu [${item.barcode}] ra khỏi kho?`)) {
                 await checkoutItemAndLog(item);
                 loadDataFromSupabase();
-                alert(`✅ Đã xuất túi máu ${item.barcode} và lưu lịch sử thành công!`);
+                alert(`✅ Đã xuất túi máu ${item.barcode} và cập nhật trạng thái thành công!`);
             }
         }
 
@@ -536,7 +536,7 @@
                     await checkoutItemAndLog(item);
                 }
                 loadDataFromSupabase();
-                alert(`✅ Đã xuất toàn bộ hàng khay và lưu lịch sử thành công!`);
+                alert(`✅ Đã xuất toàn bộ hàng khay và cập nhật trạng thái thành công!`);
             }
         }
 
@@ -560,7 +560,7 @@
                     }
                 }
                 loadDataFromSupabase();
-                alert(`✅ Đã xuất toàn bộ NGĂN ${nganId} và lưu lịch sử thành công!`);
+                alert(`✅ Đã xuất toàn bộ NGĂN ${nganId} và cập nhật trạng thái thành công!`);
             }
         }
 
@@ -608,12 +608,12 @@
                     itemsHtml += `
                         <tr class="${rowClass}">
                             <td><b>${index + 1}</b></td>
-                            <td>${item.barcode} ${isWarning ? '⚠️ (Sắp hết hạn)' : ''}</td>
+                            <td>${item.barcode}${isWarning ? '⚠️ (Sắp hết hạn)' : ''}</td>
                             <td>${item.nhom} (${item.rh})</td>
                             <td>${item.dungTich}ml</td>
                             <td>${formatDateDisplay(item.hanSuDung)}</td>
                             <td>
-                                <button class="btn-checkout" title="Xuất túi này" onclick="checkoutSingleItem(${i}, ${r}, ${index})">🚀 Xuất</button>
+                                <button class="btn-checkout" title="Xuất túi này" onclick="checkoutSingleItem(${i}, ${r},${index})">🚀 Xuất</button>
                             </td>
                         </tr>
                     `;
@@ -624,8 +624,8 @@
                         <div class="row-title">
                             <span>
                                 HÀNG KHAY ${r} (Mã: <b>${rowData.barcodeKhay || 'Trống'}</b>)
-                                <button class="btn-edit-tray" onclick="editBarcodeKhay(${i}, ${r})">✏️ Sửa Khay</button>
-                                <button class="btn-warning" onclick="checkoutRow(${i}, ${r})">🚀 Xuất Hàng</button>
+                                <button class="btn-edit-tray" onclick="editBarcodeKhay(${i},${r})">✏️ Sửa Khay</button>
+                                <button class="btn-warning" onclick="checkoutRow(${i},${r})">🚀 Xuất Hàng</button>
                             </span>
                             <span>SL: ${rowData.items.length}</span>
                         </div>
@@ -752,7 +752,7 @@
                     - Vị trí: <b>NGĂN ${foundNgan} -> HÀNG ${foundHang}</b><br>
                     - Nhóm máu: <b>${found.nhom} (${found.rh})</b><br>
                     - Hạn sử dụng: <b>${formatDateDisplay(found.hanSuDung)}</b><br>
-                    <button class="btn-checkout" style="margin-top: 8px; width: 100%; padding: 6px;" onclick="checkoutSingleItem(${foundNgan}, ${foundHang}, ${foundIndex})">🚀 Xuất túi này ra khỏi kho</button>
+                    <button class="btn-checkout" style="margin-top: 8px; width: 100%; padding: 6px;" onclick="checkoutSingleItem(${foundNgan}, ${foundHang},${foundIndex})">🚀 Xuất túi này ra khỏi kho</button>
                 `;
             } else {
                 resultDiv.className = 'search-result not-found';
@@ -769,7 +769,7 @@
                 if (!inventory[n]?.rows) continue;
                 for (let r in inventory[n].rows) {
                     inventory[n].rows[r].items.forEach(item => {
-                        const key = `${item.nhom} ${item.rh || 'Rh+'}`;
+                        const key = `${item.nhom}${item.rh || 'Rh+'}`;
                         if (stats[key] && stats[key][item.dungTich] !== undefined) {
                             stats[key][item.dungTich]++;
                         }
@@ -790,26 +790,3 @@
 
                 if (rowTotal > 0) {
                     statsBody.innerHTML += `
-                        <tr>
-                            <td><b>${groupKey}</b></td>
-                            <td>${t250}</td>
-                            <td>${t350}</td>
-                            <td>${t450}</td>
-                            <td><b>${rowTotal}</b></td>
-                        </tr>
-                    `;
-                }
-            }
-
-            statsBody.innerHTML += `
-                <tr style="background-color: #e8f5e9; font-weight: bold;">
-                    <td>TỔNG CỘNG</td>
-                    <td colspan="4" style="text-align: right; color: var(--primary-color); font-size: 1.1em;">${grandTotal} túi</td>
-                </tr>
-            `;
-        }
-
-        loadDataFromSupabase();
-    </script>
-</body>
-</html>
