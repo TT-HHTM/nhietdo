@@ -450,7 +450,7 @@
             })
             .subscribe();
 
-        // Thêm nhanh mã Barcode vào kho
+        // Thêm nhanh mã Barcode vào kho (Sử dụng upsert để ghi đè/cập nhật vị trí nếu mã đã tồn tại)
         document.getElementById('addBloodForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const nganId = document.getElementById('selectNgan').value;
@@ -467,7 +467,7 @@
 
             const { data, error } = await _supabase
                 .from('blood_units')
-                .insert([
+                .upsert([
                     {
                         tu_luu_tru: TU_LUU_TRU_ID,
                         ngan: `NGĂN ${nganId}`,
@@ -481,7 +481,7 @@
                         han_su_dung: defaultHSD,
                         status: 'available'
                     }
-                ])
+                ], { onConflict: 'barcode_tui_mau' })
                 .select();
 
             if (error) {
