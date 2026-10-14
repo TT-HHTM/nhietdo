@@ -401,4 +401,517 @@
                 <label>Yếu Tố Rh:</label>
                 <select id="editRhFactor">
                     <option value="Rh+">Rh(+)</option>
-                    <option value
+                    <option value="Rh-">Rh(-)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Dung Tích:</label>
+                <select id="editDungTich">
+                    <option value="250">250 ml</option>
+                    <option value="350">350 ml</option>
+                    <option value="450">450 ml</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Ngày Nhập:</label>
+                <input type="date" id="editNgayNhap" required>
+            </div>
+            <div class="form-group">
+                <label>Hạn Sử Dụng:</label>
+                <input type="date" id="editHanSuDung" readonly style="background-color: #e9ecef;">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button id="saveEditItemBtn" style="background-color: #0288d1;">Lưu Thay Đổi</button>
+                <button onclick="closeEditModal()" style="background-color: #757575;">Hủy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script tích hợp Supabase cho 36-TTB236 -->
+    <script>
+        const SUPABASE_URL = 'https://hbebizzldisahoonbrtn.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_Ob78HELQ_uFN2VvIRjPWig_2ZfUpYGL';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const TU_LUU_TRU_ID = '36-TTB236';
+        const totalNgan = 12;
+        const totalRows = 4;
+        let inventory = {};
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        document.getElementById('ngayNhap').value = todayStr;
+
+        function addDays(dateStr, days) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            date.setDate(date.getDate() + days);
+            return date.toISOString().split('T')[0];
+        }
+
+        function formatDateDisplay(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            return dateStr;
+        }
+
+        document.getElementById('hanSuDung').value = addDays(todayStr, 42);
+
+        document.getElementById('ngayNhap').addEventListener('change', function() {
+            document.getElementById('hanSuDung').value = addDays(this.value, 42);
+        });
+
+        document.getElementById('editNgayNhap').addEventListener('change', function() {
+            document.getElementById('editHanSuDung').value = addDays(this.value, 42);
+        });
+
+        function initInventory() {
+            let temp = {};
+            for (let i = 1; i <= totalNgan; i++) {
+                temp[i] = {
+                    rows: {
+                        1: { barcodeKhay: '', items: [] },
+                        2: { barcodeKhay: '', items: [] },
+                        3: { barcodeKhay: '', items: [] },
+                        4: { barcodeKhay: '', items: [] }
+                    }
+                };
+            }
+            return temp;
+        }
+        inventory = initInventory();
+
+        const selectNgan = document.getElementById('selectNgan');
+        function populateNganSelects() {
+            selectNgan.innerHTML = '';
+            for (let i = 1; i <= totalNgan; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = `NGĂN ${i}`;
+                selectNgan.appendChild(opt);
+            }
+        }
+        populateNganSelects();
+
+        function updateSyncStatus(msg, isError = false) {
+            const el = document.getElementById('syncStatus');
+            if (el) {
+                el.textContent = msg;
+                el.style.color = isError ? '#ffcdd2' : '#ffffff';
+            }
+        }
+
+        async function loadDataFromSupabase() {
+            updateSyncStatus('🟡 Đang tải dữ liệu từ Supabase...');
+            const { data, error } = await _supabase
+                .from('blood_units')
+                .select('*')
+                .eq('tu_luu_tru', TU_LUU_TRU_ID)
+                .eq('status', 'available');
+
+            if (error) {
+                console.error("Lỗi tải Supabase:", error);
+                updateSyncStatus('🔴 Lỗi kết nối Supabase', true);
+                return;
+            }
+
+            inventory = initInventory();
+
+            data.forEach(row => {
+                const nganMatch = String(row.ngan || "").match(/\d+/);
+                const hangMatch = String(row.hang_khay || "").match(/\d+/);
+
+                if (nganMatch && hangMatch) {
+                    const nganId = parseInt(nganMatch[0], 10);
+                    const hangId = parseInt(hangMatch[0], 10);
+
+                    if (inventory[nganId] && inventory[nganId].rows[hangId]) {
+                        inventory[nganId].rows[hangId].barcodeKhay = row.barcode_khay || '';
+                        inventory[nganId].rows[hangId].items.push({
+                            id: row.id,
+                            barcode: row.barcode_tui_mau,
+                            nhom: row.nhom_mau,
+                            rh: row.yeu_to_rh,
+                            dungTich: row.dung_tich,
+                            ngayNhap: row.ngay_nhap,
+                            hanSuDung: row.han_su_dung
+                        });
+                    }
+                }
+            });
+
+            renderView();
+            updateSyncStatus('🟢 Đã đồng bộ với Supabase');
+        }
+
+        const realtimeChannel = _supabase
+            .channel('public:blood_units_236')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'blood_units' }, (payload) => {
+                console.log('Dữ liệu thay đổi thời gian thực:', payload);
+                loadDataFromSupabase();
+            })
+            .subscribe();
+
+        document.getElementById('addBloodForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const nganId = document.getElementById('selectNgan').value;
+            const hangId = document.getElementById('selectHang').value;
+            const barcodeKhay = document.getElementById('barcodeKhay').value;
+            const barcodeTui = document.getElementById('barcodeTui').value.trim();
+            const nhomMau = document.getElementById('nhomMau').value;
+            const rhFactor = document.getElementById('rhFactor').value;
+            const dungTich = document.getElementById('dungTich').value;
+            const ngayNhap = document.getElementById('ngayNhap').value;
+            const hanSuDung = document.getElementById('hanSuDung').value;
+
+            if (!barcodeTui) return;
+
+            updateSyncStatus('🟡 Đang lưu vào Supabase...');
+
+            const { data, error } = await _supabase
+                .from('blood_units')
+                .insert([
+                    {
+                        tu_luu_tru: TU_LUU_TRU_ID,
+                        ngan: `NGĂN ${nganId}`,
+                        hang_khay: `HÀNG ${hangId}`,
+                        barcode_khay: barcodeKhay,
+                        barcode_tui_mau: barcodeTui,
+                        nhom_mau: nhomMau,
+                        yeu_to_rh: rhFactor,
+                        dung_tich: parseInt(dungTich),
+                        ngay_nhap: ngayNhap,
+                        han_su_dung: hanSuDung,
+                        status: 'available'
+                    }
+                ])
+                .select();
+
+            if (error) {
+                alert('Lỗi khi lưu vào Supabase: ' + error.message);
+                updateSyncStatus('🔴 Lỗi lưu dữ liệu', true);
+                return;
+            }
+
+            document.getElementById('barcodeTui').value = '';
+            loadDataFromSupabase();
+        });
+
+        window.editBarcodeKhay = async function(nganId, hangId) {
+            const currentBarcode = inventory[nganId].rows[hangId].barcodeKhay || '';
+            const newBarcode = prompt(`Nhập mã Barcode khay mới cho Ngăn ${nganId} - Hàng ${hangId}:`, currentBarcode);
+            
+            if (newBarcode !== null) {
+                const trimmedBarcode = newBarcode.trim();
+                inventory[nganId].rows[hangId].barcodeKhay = trimmedBarcode;
+                
+                const itemsInRow = inventory[nganId].rows[hangId].items;
+                for (let item of itemsInRow) {
+                    await _supabase
+                        .from('blood_units')
+                        .update({ barcode_khay: trimmedBarcode })
+                        .eq('id', item.id);
+                }
+                renderView();
+            }
+        }
+
+        let editTargetId = null;
+
+        window.openEditItemModal = function(nganId, hangId, index) {
+            const item = inventory[nganId].rows[hangId].items[index];
+            editTargetId = item.id;
+
+            document.getElementById('editBarcodeTui').value = item.barcode;
+            document.getElementById('editNhomMau').value = item.nhom;
+            document.getElementById('editRhFactor').value = item.rh || 'Rh+';
+            document.getElementById('editDungTich').value = item.dungTich;
+            document.getElementById('editNgayNhap').value = item.ngayNhap || todayStr;
+            document.getElementById('editHanSuDung').value = item.hanSuDung || addDays(item.ngayNhap || todayStr, 42);
+
+            document.getElementById('editItemModal').style.display = 'flex';
+        }
+
+        window.closeEditModal = function() {
+            document.getElementById('editItemModal').style.display = 'none';
+        }
+
+        document.getElementById('saveEditItemBtn').addEventListener('click', async function() {
+            const newBarcode = document.getElementById('editBarcodeTui').value.trim();
+            const newNhom = document.getElementById('editNhomMau').value;
+            const newRh = document.getElementById('editRhFactor').value;
+            const newDungTich = document.getElementById('editDungTich').value;
+            const newNgayNhap = document.getElementById('editNgayNhap').value;
+            const newHanSuDung = document.getElementById('editHanSuDung').value;
+
+            if (!newBarcode) {
+                alert('Barcode túi máu không được để trống!');
+                return;
+            }
+
+            const { error } = await _supabase
+                .from('blood_units')
+                .update({
+                    barcode_tui_mau: newBarcode,
+                    nhom_mau: newNhom,
+                    yeu_to_rh: newRh,
+                    dung_tich: parseInt(newDungTich),
+                    ngay_nhap: newNgayNhap,
+                    han_su_dung: newHanSuDung
+                })
+                .eq('id', editTargetId);
+
+            if (error) {
+                alert('Lỗi cập nhật: ' + error.message);
+                return;
+            }
+
+            alert('Đã cập nhật thông tin túi máu thành công!');
+            closeEditModal();
+            loadDataFromSupabase();
+        });
+
+        window.removeItem = async function(nganId, hangId, index) {
+            if (confirm('Bạn có chắc chắn muốn xóa túi máu này?')) {
+                const item = inventory[nganId].rows[hangId].items[index];
+                if (item.id) {
+                    await _supabase.from('blood_units').delete().eq('id', item.id);
+                }
+                loadDataFromSupabase();
+            }
+        }
+
+        window.clearAllData = async function() {
+            if (confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA TẤT CẢ dữ liệu kho sạch ${TU_LUU_TRU_ID} trên Supabase?`)) {
+                await _supabase.from('blood_units').delete().eq('tu_luu_tru', TU_LUU_TRU_ID);
+                loadDataFromSupabase();
+                alert("Đã xóa toàn bộ dữ liệu kho!");
+            }
+        }
+
+        function createCompartmentBox(i) {
+            const ngan = inventory[i] || { rows: { 1: { barcodeKhay: '', items: [] }, 2: { barcodeKhay: '', items: [] }, 3: { barcodeKhay: '', items: [] }, 4: { barcodeKhay: '', items: [] } } };
+            let totalItemsInNgan = 0;
+            let rowsContentHtml = '';
+
+            for (let r = 1; r <= totalRows; r++) {
+                const rowData = ngan.rows[r] || { barcodeKhay: '', items: [] };
+                totalItemsInNgan += rowData.items.length;
+
+                let itemsHtml = '';
+                rowData.items.forEach((item, index) => {
+                    itemsHtml += `
+                        <tr>
+                            <td><b>${index + 1}</b></td>
+                            <td>${item.barcode}</td>
+                            <td>${item.nhom} (${item.rh})</td>
+                            <td>${item.dungTich}ml</td>
+                            <td>${formatDateDisplay(item.ngayNhap)}</td>
+                            <td>${formatDateDisplay(item.hanSuDung)}</td>
+                            <td>
+                                <button class="btn-edit-single" title="Sửa thông tin" onclick="openEditItemModal(${i}, ${r}, ${index})">✏️</button>
+                                <button class="btn-danger" title="Xóa" onclick="removeItem(${i}, ${r}, ${index})">🗑️</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                rowsContentHtml += `
+                    <div class="row-tray">
+                        <div class="row-title">
+                            <span>
+                                HÀNG KHAY ${r} (Mã: <b>${rowData.barcodeKhay || 'Trống'}</b>)
+                                <button class="btn-edit-tray" onclick="editBarcodeKhay(${i}, ${r})">✏️ Sửa Khay</button>
+                            </span>
+                            <span>SL: ${rowData.items.length}</span>
+                        </div>
+                        ${rowData.items.length > 0 ? `
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width: 25px;">STT</th>
+                                        <th>Barcode Túi</th>
+                                        <th>Nhóm / Rh</th>
+                                        <th>Dung Tích</th>
+                                        <th>Ngày Nhập</th>
+                                        <th>Hạn Sử Dụng</th>
+                                        <th style="width: 75px;">Thao Tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${itemsHtml}
+                                </tbody>
+                            </table>
+                        ` : '<div style="font-size: 0.8em; color: #999; text-align: center; padding: 3px;">Hàng khay trống</div>'}
+                    </div>
+                `;
+            }
+
+            const box = document.createElement('div');
+            box.className = 'compartment-box';
+            box.innerHTML = `
+                <div class="compartment-header">
+                    <span>NGĂN ${i}</span>
+                    <small>Tổng số: <b>${totalItemsInNgan}</b> túi</small>
+                </div>
+                ${rowsContentHtml}
+            `;
+            return box;
+        }
+
+        function renderView() {
+            const leftCol = document.getElementById('leftColumn');
+            const rightCol = document.getElementById('rightColumn');
+
+            leftCol.innerHTML = '<div class="column-title">CỘT BÊN TRÁI (NGĂN 1 - 6)</div>';
+            rightCol.innerHTML = '<div class="column-title">CỘT BÊN PHẢI (NGĂN 7 - 12)</div>';
+
+            for (let i = 1; i <= 6; i++) {
+                leftCol.appendChild(createCompartmentBox(i));
+            }
+
+            for (let i = 7; i <= 12; i++) {
+                rightCol.appendChild(createCompartmentBox(i));
+            }
+
+            updateStats();
+        }
+
+        window.exportToExcel = function() {
+            let exportData = [];
+            let sttTong = 1;
+
+            for (let n = 1; n <= totalNgan; n++) {
+                for (let r = 1; r <= totalRows; r++) {
+                    const rowData = inventory[n]?.rows[r];
+                    if (!rowData) continue;
+                    rowData.items.forEach((item, index) => {
+                        exportData.push({
+                            "STT": sttTong,
+                            "Tủ lưu trữ": TU_LUU_TRU_ID,
+                            "Ngăn": `NGĂN ${n}`,
+                            "Hàng Khay": `HÀNG ${r}`,
+                            "STT Trong Khay": index + 1,
+                            "Barcode Khay": rowData.barcodeKhay || 'Trống',
+                            "Barcode Túi Máu": item.barcode,
+                            "Nhóm Máu": item.nhom,
+                            "Yếu Tố Rh": item.rh,
+                            "Dung Tích (ml)": item.dungTich,
+                            "Ngày Nhập": formatDateDisplay(item.ngayNhap),
+                            "Hạn Sử Dụng": formatDateDisplay(item.hanSuDung)
+                        });
+                        sttTong++;
+                    });
+                }
+            }
+
+            if (exportData.length === 0) {
+                alert("Kho sạch hiện tại đang trống!");
+                return;
+            }
+
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "KHO_SACH_TTB236");
+            XLSX.writeFile(workbook, `KHO_SACH_TTB236_${new Date().toISOString().slice(0,10)}.xlsx`);
+            alert("✅ Đã xuất file Excel thành công!");
+        }
+
+        window.searchBloodBag = function() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const resultDiv = document.getElementById('searchResult');
+            
+            if (!query) {
+                resultDiv.innerHTML = '';
+                return;
+            }
+
+            let found = null, foundNgan = null, foundHang = null, foundIndex = null;
+
+            for (let n in inventory) {
+                for (let r in inventory[n].rows) {
+                    const idx = inventory[n].rows[r].items.findIndex(i => i.barcode.toLowerCase() === query);
+                    if (idx !== -1) {
+                        found = inventory[n].rows[r].items[idx];
+                        foundNgan = n;
+                        foundHang = r;
+                        foundIndex = idx;
+                        break;
+                    }
+                }
+                if (found) break;
+            }
+
+            if (found) {
+                resultDiv.className = 'search-result';
+                resultDiv.innerHTML = `
+                    <strong>Tìm thấy túi máu trong kho sạch!</strong><br>
+                    - Barcode: <b>${found.barcode}</b><br>
+                    - Vị trí: <b>NGĂN ${foundNgan} -> HÀNG ${foundHang}</b><br>
+                    - Mã khay: <b>${inventory[foundNgan].rows[foundHang].barcodeKhay || 'Trống'}</b><br>
+                    - Nhóm máu: <b>${found.nhom} (${found.rh})</b><br>
+                    - Dung tích: <b>${found.dungTich} ml</b><br>
+                    - Ngày nhập: <b>${formatDateDisplay(found.ngayNhap)}</b><br>
+                    - Hạn sử dụng: <b>${formatDateDisplay(found.hanSuDung)}</b><br>
+                    <button class="btn-edit-single" style="margin-top: 8px; width: 100%; padding: 6px;" onclick="openEditItemModal(${foundNgan}, ${foundHang}, ${foundIndex})">✏️ Sửa thông tin túi này</button>
+                `;
+            } else {
+                resultDiv.className = 'search-result not-found';
+                resultDiv.innerHTML = '<strong>Không tìm thấy</strong> túi máu trong kho sạch.';
+            }
+        }
+
+        function updateStats() {
+            const groupKeys = ['O Rh+', 'O Rh-', 'A Rh+', 'A Rh-', 'B Rh+', 'B Rh-', 'AB Rh+', 'AB Rh-'];
+            const stats = {};
+            groupKeys.forEach(key => { stats[key] = { 250: 0, 350: 0, 450: 0 }; });
+
+            for (let n in inventory) {
+                if (!inventory[n]?.rows) continue;
+                for (let r in inventory[n].rows) {
+                    inventory[n].rows[r].items.forEach(item => {
+                        const key = `${item.nhom} ${item.rh || 'Rh+'}`;
+                        if (stats[key] && stats[key][item.dungTich] !== undefined) {
+                            stats[key][item.dungTich]++;
+                        }
+                    });
+                }
+            }
+
+            const statsBody = document.getElementById('statsBody');
+            statsBody.innerHTML = '';
+            let grandTotal = 0;
+
+            for (let groupKey of groupKeys) {
+                const t250 = stats[groupKey][250];
+                const t350 = stats[groupKey][350];
+                const t450 = stats[groupKey][450];
+                const rowTotal = t250 + t350 + t450;
+                grandTotal += rowTotal;
+
+                if (rowTotal > 0) {
+                    statsBody.innerHTML += `
+                        <tr>
+                            <td><b>${groupKey}</b></td>
+                            <td>${t250}</td>
+                            <td>${t350}</td>
+                            <td>${t450}</td>
+                            <td><b>${rowTotal}</b></td>
+                        </tr>
+                    `;
+                }
+            }
+
+            statsBody.innerHTML += `
+                <tr style="background-color: #e8f5e9; font-weight: bold;">
+                    <td>TỔNG CỘNG</td>
+                    <td colspan="4" style="text-align: right; color: var(--primary-color); font-size: 1.1em;">${grandTotal} túi</td>
+                </tr>
+            `;
+        }
+
+        // Tự động tải dữ liệu từ Supabase khi mở trang
+        loadDataFromSupabase();
+    </script>
+</body>
+</html>
