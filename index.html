@@ -535,18 +535,25 @@
                         statusText = "Trạng thái: " + (status || "Không xác định");
                     }
 
-                    // Xây dựng ánh xạ tên tủ sang đường dẫn file HTML tương ứng
-                    const cabinetMapping = {
-                        '36-TTB237': '237FN.html',
-                        '36-TTB25': '25FN.html',
-                        '36-TTB23': '23FN.html',
-                        '36-TTB236': '236FN.html',
-                        '36-TTB26': '26KS.html',
-                        '36-TTB236-Sach': '236KS.html'
-                    };
-
                     let tuLuuTru = data.tu_luu_tru ?? '';
-                    let cabinetLink = cabinetMapping[tuLuuTru] || '#';
+                    let cabinetLink = '#';
+
+                    // Xử lý đường dẫn liên kết tùy theo tủ và trạng thái kho sạch/kho thô
+                    if (tuLuuTru === '36-TTB236') {
+                        if (status === 'khosach') {
+                            cabinetLink = '236KS.html';
+                        } else {
+                            cabinetLink = '236FN.html';
+                        }
+                    } else {
+                        const cabinetMapping = {
+                            '36-TTB237': '237FN.html',
+                            '36-TTB25': '25FN.html',
+                            '36-TTB23': '23FN.html',
+                            '36-TTB26': '26KS.html'
+                        };
+                        cabinetLink = cabinetMapping[tuLuuTru] || '#';
+                    }
 
                     // Hiển thị thêm thông tin chi tiết và nút đi tới tủ nếu ở kho thô hoặc kho sạch
                     let extraInfo = "";
