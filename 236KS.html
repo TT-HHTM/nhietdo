@@ -119,6 +119,7 @@
         .btn-clear-all { background-color: #c62828; }
         .btn-warning { background-color: #ef6c00; color: white; padding: 2px 6px; font-size: 0.75em; width: auto; border-radius: 3px; margin-left: 4px; cursor: pointer; }
         .btn-checkout { background-color: #d32f2f; color: white; padding: 2px 6px; font-size: 0.75em; width: auto; border-radius: 3px; margin-right: 2px; cursor: pointer; }
+        .btn-delete-item { background-color: #b71c1c; color: white; padding: 2px 6px; font-size: 0.75em; width: auto; border-radius: 3px; cursor: pointer; margin-left: 2px; }
 
         .grid-layout {
             display: grid;
@@ -523,6 +524,22 @@
             }
         }
 
+        // Xóa hẳn từng túi máu đơn lẻ khỏi cơ sở dữ liệu
+        window.deleteSingleItem = async function(nganId, hangId, index) {
+            const item = inventory[nganId].rows[hangId].items[index];
+            if (confirm(`⚠️ XÁC NHẬN XÓA: Bạn có chắc chắn muốn xóa hẳn túi máu [${item.barcode}] khỏi hệ thống không?`)) {
+                if (item.id) {
+                    const { error } = await _supabase.from('blood_units').delete().eq('id', item.id);
+                    if (error) {
+                        alert('Lỗi khi xóa túi máu: ' + error.message);
+                        return;
+                    }
+                }
+                loadDataFromSupabase();
+                alert(`🗑️ Đã xóa túi máu ${item.barcode} thành công!`);
+            }
+        }
+
         // Xuất toàn bộ một hàng khay
         window.checkoutRow = async function(nganId, hangId) {
             const rowData = inventory[nganId]?.rows[hangId];
@@ -614,6 +631,7 @@
                             <td>${formatDateDisplay(item.hanSuDung)}</td>
                             <td>
                                 <button class="btn-checkout" title="Xuất túi này" onclick="checkoutSingleItem(${i}, ${r}, ${index})">🚀 Xuất</button>
+                                <button class="btn-delete-item" title="Xóa túi này" onclick="deleteSingleItem(${i}, ${r}, ${index})">🗑 Xóa</button>
                             </td>
                         </tr>
                     `;
@@ -638,7 +656,7 @@
                                         <th>Nhóm / Rh</th>
                                         <th>Dung Tích</th>
                                         <th>Hạn Sử Dụng</th>
-                                        <th style="width: 65px;">Thao Tác</th>
+                                        <th style="width: 100px;">Thao Tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -752,7 +770,10 @@
                     - Vị trí: <b>NGĂN ${foundNgan} -> HÀNG ${foundHang}</b><br>
                     - Nhóm máu: <b>${found.nhom} (${found.rh})</b><br>
                     - Hạn sử dụng: <b>${formatDateDisplay(found.hanSuDung)}</b><br>
-                    <button class="btn-checkout" style="margin-top: 8px; width: 100%; padding: 6px;" onclick="checkoutSingleItem(${foundNgan}, ${foundHang}, ${foundIndex})">🚀 Xuất túi này ra khỏi kho</button>
+                    <div style="display: flex; gap: 5px; margin-top: 8px;">
+                        <button class="btn-checkout" style="flex: 1; padding: 6px;" onclick="checkoutSingleItem(${foundNgan}, ${foundHang}, ${foundIndex})">🚀 Xuất</button>
+                        <button class="btn-delete-item" style="flex: 1; padding: 6px;" onclick="deleteSingleItem(${foundNgan}, ${foundHang}, ${foundIndex})">🗑 Xóa</button>
+                    </div>
                 `;
             } else {
                 resultDiv.className = 'search-result not-found';
