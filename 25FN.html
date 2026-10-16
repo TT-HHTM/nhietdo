@@ -292,7 +292,7 @@
 
     <div class="header">
         <a href="index.html" class="btn-back-menu">⬅ TRỞ VỀ MENU</a>
-        <h1>HỆ THỐNG PHẦN MỀM QUẢN LÝ KHO THÔ (36-TTB25) - SUPABASE</h1>
+        <h1>HỆ THỐNG PHẦN MỀM QUẢN LÝ KHO THÔ (36-TTB25) - NHẬP KHO</h1>
         <div id="syncStatus" class="sync-status">🟢 Đang kết nối Supabase...</div>
     </div>
 
@@ -302,7 +302,7 @@
             
             <!-- Form Nhập Túi Máu -->
             <div class="card">
-                <h3>Nhập Liệu Túi Máu Vào Hàng Khay</h3>
+                <h3>Nhập Liệu Túi Máu Vào Hàng Khay (Kho Thô - nhapkho)</h3>
                 <form id="addBloodForm" style="display: grid; grid-template-columns: repeat(9, 1fr) 90px; gap: 8px; align-items: end;">
                     <div class="form-group">
                         <label>Vị trí Ngăn</label>
@@ -378,7 +378,7 @@
                 <button class="btn-success" onclick="exportToExcel()">📊 Xuất Excel</button>
                 <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="importFromExcel(event)">
                 <button class="btn-info" onclick="document.getElementById('excelFileInput').click()">📥 Nhập File Excel</button>
-                <button class="btn-clear-all" onclick="clearAllData()">🗑 Xóa Tất Cả Dữ Liệu Kho</button>
+                <button class="btn-clear-all" onclick="clearAllData()">🗑 Nhập mới</button>
             </div>
 
             <div class="card">
@@ -457,16 +457,14 @@
 
     <!-- Script tích hợp Supabase -->
     <script>
-        // 1. Cấu hình Supabase
         const SUPABASE_URL = 'https://hbebizzldisahoonbrtn.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_Ob78HELQ_uFN2VvIRjPWig_2ZfUpYGL';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const totalNgan = 6; // Giới hạn lại còn 6 ngăn
+        const totalNgan = 6; 
         const totalRows = 4;
         let inventory = {};
 
-        // Đặt ngày nhập mặc định là hôm nay và tự động tính HSD (+42 ngày)
         const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById('ngayNhap').value = todayStr;
 
@@ -530,14 +528,14 @@
             }
         }
 
-        // Tải toàn bộ dữ liệu từ Supabase và phân chia chính xác vào các Ngăn/Hàng
+        // Tải dữ liệu từ Supabase lọc theo status = 'nhapkho' cho tủ 36-TTB25[cite: 12]
         async function loadDataFromSupabase() {
             updateSyncStatus('🟡 Đang tải dữ liệu từ Supabase...');
             const { data, error } = await _supabase
                 .from('blood_units')
                 .select('*')
                 .eq('tu_luu_tru', '36-TTB25')
-                .eq('status', 'available');
+                .eq('status', 'nhapkho');
 
             if (error) {
                 console.error("Lỗi tải Supabase:", error);
@@ -574,16 +572,14 @@
             updateSyncStatus('🟢 Đã đồng bộ với Supabase');
         }
 
-        // Lắng nghe thay đổi Realtime từ Supabase
         const realtimeChannel = _supabase
-            .channel('public:blood_units')
+            .channel('public:blood_units_25_nhapkho')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'blood_units' }, (payload) => {
-                console.log('Dữ liệu thay đổi thời gian thực:', payload);
                 loadDataFromSupabase();
             })
             .subscribe();
 
-        // Thêm túi máu mới vào Supabase
+        // Thêm túi máu mới với trạng thái 'nhapkho'[cite: 12]
         document.getElementById('addBloodForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const nganId = document.getElementById('selectNgan').value;
@@ -614,7 +610,7 @@
                         dung_tich: parseInt(dungTich),
                         ngay_nhap: ngayNhap,
                         han_su_dung: hanSuDung,
-                        status: 'available'
+                        status: 'nhapkho'
                     }
                 ])
                 .select();
@@ -713,12 +709,13 @@
             }
         }
 
+        // Tính năng "Nhập mới": Chỉ làm sạch hiển thị trên màn hình, không ảnh hưởng đến Supabase[cite: 12]
         window.clearAllData = function() {
             if (confirm("⚠️ CẢNH BÁO: Bạn có chắc chắn muốn làm sạch hiển thị toàn bộ dữ liệu trên màn hình này không? (Dữ liệu trên Supabase không bị ảnh hưởng)")) {
                 inventory = initInventory();
                 renderView();
                 updateSyncStatus('🟢 Đã làm sạch hiển thị giao diện');
-                alert("Đã xóa hiển thị trên giao diện thành công!");
+                alert("Đã làm sạch màn hình thành công! Bạn có thể tiếp tục nhập liệu mới.");
             }
         }
 
@@ -936,7 +933,6 @@
             `;
         }
 
-        // Tự động tải dữ liệu từ Supabase khi mở trang
         loadDataFromSupabase();
     </script>
 </body>
