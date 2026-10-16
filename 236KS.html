@@ -115,7 +115,6 @@
         }
 
         .btn-success { background-color: #2e7d32; margin-bottom: 8px; }
-        .btn-info { background-color: #0288d1; margin-bottom: 8px; }
         .btn-clear-all { background-color: #c62828; }
         .btn-warning { background-color: #ef6c00; color: white; padding: 2px 6px; font-size: 0.75em; width: auto; border-radius: 3px; margin-left: 4px; cursor: pointer; }
         .btn-checkout { background-color: #d32f2f; color: white; padding: 2px 6px; font-size: 0.75em; width: auto; border-radius: 3px; margin-right: 2px; cursor: pointer; }
@@ -393,6 +392,7 @@
             }
         }
 
+        // Đọc dữ liệu từ Supabase (lọc các túi có status = 'available')
         async function loadDataFromSupabase() {
             updateSyncStatus('🟡 Đang tải dữ liệu từ Supabase...');
             const { data, error } = await _supabase
@@ -443,50 +443,61 @@
             })
             .subscribe();
 
+        // KỊCH BẢN: Nhập barcode túi máu -> Lấy thông tin từ Supabase -> Đẩy vào web & cập nhật status thành 'exported'
         document.getElementById('addBloodForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const nganId = document.getElementById('selectNgan').value;
             const hangId = document.getElementById('selectHang').value;
-            const barcodeKhay = document.getElementById('barcodeKhay').value;
+            const barcodeKhay = document.getElementById('barcodeKhay').value.trim();
             const barcodeTui = document.getElementById('barcodeTui').value.trim();
             
             if (!barcodeTui) return;
 
-            const today = new Date().toISOString().split('T')[0];
-            const defaultHSD = addDays(today, 42);
+            updateSyncStatus('🟡 Đang tìm kiếm và cập nhật túi máu...');
 
-            updateSyncStatus('🟡 Đang lưu vào Supabase...');
-
-            const { data, error } = await _supabase
+            // 1. Kiểm tra xem túi máu có tồn tại trên Supabase hay không
+            const { data: existingUnits, error: fetchError } = await _supabase
                 .from('blood_units')
-                .upsert([
-                    {
-                        tu_luu_tru: TU_LUU_TRU_ID,
-                        ngan: `NGĂN ${nganId}`,
-                        hang_khay: `HÀNG ${hangId}`,
-                        barcode_khay: barcodeKhay,
-                        barcode_tui_mau: barcodeTui,
-                        nhom_mau: 'O',
-                        yeu_to_rh: 'Rh+',
-                        dung_tich: 250,
-                        ngay_nhap: today,
-                        han_su_dung: defaultHSD,
-                        status: 'available'
-                    }
-                ], { onConflict: 'barcode_tui_mau' })
-                .select();
+                .select('*')
+                .eq('barcode_tui_mau', barcodeTui);
 
-            if (error) {
-                alert('Lỗi khi lưu vào Supabase: ' + error.message);
-                updateSyncStatus('🔴 Lỗi lưu dữ liệu', true);
+            if (fetchError) {
+                alert('Lỗi truy vấn Supabase: ' + fetchError.message);
+                updateSyncStatus('🔴 Lỗi kết nối', true);
+                return;
+            }
+
+            if (!existingUnits || existingUnits.length === 0) {
+                alert(`⚠️ Không tìm thấy túi máu có mã barcode [${barcodeTui}] trên cơ sở dữ liệu Supabase!`);
+                updateSyncStatus('🔴 Không tìm thấy túi máu', true);
+                return;
+            }
+
+            // 2. Cập nhật vị trí lưu trữ, mã khay và chuyển trạng thái (status) thành 'exported'
+            const { error: updateError } = await _supabase
+                .from('blood_units')
+                .update({
+                    tu_luu_tru: TU_LUU_TRU_ID,
+                    ngan: `NGĂN ${nganId}`,
+                    hang_khay: `HÀNG ${hangId}`,
+                    barcode_khay: barcodeKhay,
+                    status: 'exported' // Chuyển trạng thái sang exported theo yêu cầu
+                })
+                .eq('barcode_tui_mau', barcodeTui);
+
+            if (updateError) {
+                alert('Lỗi khi cập nhật trạng thái: ' + updateError.message);
+                updateSyncStatus('🔴 Lỗi cập nhật', true);
                 return;
             }
 
             document.getElementById('barcodeTui').value = '';
             document.getElementById('barcodeTui').focus();
             loadDataFromSupabase();
+            alert(`✅ Đã nhập thành công túi máu [${barcodeTui}] và cập nhật trạng thái thành 'exported'!`);
         });
 
+        // Hàm ghi log lịch sử xuất kho và chuyển trạng thái thành 'exported' khi xuất từ giao diện
         async function checkoutItemAndLog(item) {
             await _supabase.from('checkout_logs').insert([{
                 tu_luu_tru: TU_LUU_TRU_ID,
@@ -511,7 +522,6 @@
             }
         }
 
-        // Thêm hàm xóa trực tiếp một túi máu khỏi cơ sở dữ liệu trên Supabase
         window.deleteSingleItem = async function(nganId, hangId, index) {
             const item = inventory[nganId].rows[hangId].items[index];
             if (confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA vĩnh viễn túi máu [${item.barcode}] khỏi hệ thống không?`)) {
