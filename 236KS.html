@@ -115,10 +115,10 @@
         }
 
         .btn-success { background-color: #2e7d32; margin-bottom: 8px; }
+        .btn-info { background-color: #0288d1; margin-bottom: 8px; }
         .btn-clear-all { background-color: #c62828; }
         .btn-warning { background-color: #ef6c00; color: white; padding: 2px 6px; font-size: 0.75em; width: auto; border-radius: 3px; margin-left: 4px; cursor: pointer; }
         .btn-checkout { background-color: #d32f2f; color: white; padding: 2px 6px; font-size: 0.75em; width: auto; border-radius: 3px; margin-right: 2px; cursor: pointer; }
-        .btn-delete-item { background-color: #b71c1c; color: white; padding: 2px 6px; font-size: 0.75em; width: auto; border-radius: 3px; cursor: pointer; }
 
         .grid-layout {
             display: grid;
@@ -206,6 +206,14 @@
         }
 
         th { background-color: #f0f0f0; }
+
+        .btn-danger {
+            background-color: #c62828;
+            padding: 2px 5px;
+            font-size: 0.75em;
+            width: auto;
+            border-radius: 3px;
+        }
 
         .row-warning {
             background-color: #ffebee !important;
@@ -392,7 +400,6 @@
             }
         }
 
-        // Đọc dữ liệu từ Supabase (lọc các túi có status = 'available')
         async function loadDataFromSupabase() {
             updateSyncStatus('🟡 Đang tải dữ liệu từ Supabase...');
             const { data, error } = await _supabase
@@ -443,62 +450,54 @@
             })
             .subscribe();
 
-        // KỊCH BẢN: Nhập barcode túi máu -> Lấy thông tin từ Supabase -> Đẩy vào web & cập nhật status thành 'exported'
+        // Thêm nhanh mã Barcode vào kho (Sử dụng upsert để cập nhật lại trạng thái available nếu túi cũ đã xuất và đưa trở lại kho)
         document.getElementById('addBloodForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const nganId = document.getElementById('selectNgan').value;
             const hangId = document.getElementById('selectHang').value;
-            const barcodeKhay = document.getElementById('barcodeKhay').value.trim();
+            const barcodeKhay = document.getElementById('barcodeKhay').value;
             const barcodeTui = document.getElementById('barcodeTui').value.trim();
             
             if (!barcodeTui) return;
 
-            updateSyncStatus('🟡 Đang tìm kiếm và cập nhật túi máu...');
+            const today = new Date().toISOString().split('T')[0];
+            const defaultHSD = addDays(today, 42);
 
-            // 1. Kiểm tra xem túi máu có tồn tại trên Supabase hay không
-            const { data: existingUnits, error: fetchError } = await _supabase
+            updateSyncStatus('🟡 Đang lưu vào Supabase...');
+
+            const { data, error } = await _supabase
                 .from('blood_units')
-                .select('*')
-                .eq('barcode_tui_mau', barcodeTui);
+                .upsert([
+                    {
+                        tu_luu_tru: TU_LUU_TRU_ID,
+                        ngan: `NGĂN ${nganId}`,
+                        hang_khay: `HÀNG ${hangId}`,
+                        barcode_khay: barcodeKhay,
+                        barcode_tui_mau: barcodeTui,
+                        nhom_mau: 'O',
+                        yeu_to_rh: 'Rh+',
+                        dung_tich: 250,
+                        ngay_nhap: today,
+                        han_su_dung: defaultHSD,
+                        status: 'available'
+                    }
+                ], { onConflict: 'barcode_tui_mau' })
+                .select();
 
-            if (fetchError) {
-                alert('Lỗi truy vấn Supabase: ' + fetchError.message);
-                updateSyncStatus('🔴 Lỗi kết nối', true);
-                return;
-            }
-
-            if (!existingUnits || existingUnits.length === 0) {
-                alert(`⚠️ Không tìm thấy túi máu có mã barcode [${barcodeTui}] trên cơ sở dữ liệu Supabase!`);
-                updateSyncStatus('🔴 Không tìm thấy túi máu', true);
-                return;
-            }
-
-            // 2. Cập nhật vị trí lưu trữ, mã khay và chuyển trạng thái (status) thành 'exported'
-            const { error: updateError } = await _supabase
-                .from('blood_units')
-                .update({
-                    tu_luu_tru: TU_LUU_TRU_ID,
-                    ngan: `NGĂN ${nganId}`,
-                    hang_khay: `HÀNG ${hangId}`,
-                    barcode_khay: barcodeKhay,
-                    status: 'exported' // Chuyển trạng thái sang exported theo yêu cầu
-                })
-                .eq('barcode_tui_mau', barcodeTui);
-
-            if (updateError) {
-                alert('Lỗi khi cập nhật trạng thái: ' + updateError.message);
-                updateSyncStatus('🔴 Lỗi cập nhật', true);
+            if (error) {
+                alert('Lỗi khi lưu vào Supabase: ' + error.message);
+                updateSyncStatus('🔴 Lỗi lưu dữ liệu', true);
                 return;
             }
 
             document.getElementById('barcodeTui').value = '';
             document.getElementById('barcodeTui').focus();
             loadDataFromSupabase();
-            alert(`✅ Đã nhập thành công túi máu [${barcodeTui}] và cập nhật trạng thái thành 'exported'!`);
         });
 
-        // Hàm ghi log lịch sử xuất kho và chuyển trạng thái thành 'exported' khi xuất từ giao diện
+        // Hàm ghi log lịch sử xuất kho và chuyển trạng thái thành 'exported' (đã xuất) thay vì xóa hẳn
         async function checkoutItemAndLog(item) {
+            // 1. Lưu vào bảng lịch sử xuất kho
             await _supabase.from('checkout_logs').insert([{
                 tu_luu_tru: TU_LUU_TRU_ID,
                 barcode_tui_mau: item.barcode,
@@ -508,41 +507,23 @@
                 han_su_dung: item.hanSuDung
             }]);
 
+            // 2. Cập nhật status thành 'exported' trong bảng blood_units để lưu lại thông tin đã xuất
             if (item.id) {
                 await _supabase.from('blood_units').update({ status: 'exported' }).eq('id', item.id);
             }
         }
 
+        // Xuất từng túi máu đơn lẻ
         window.checkoutSingleItem = async function(nganId, hangId, index) {
             const item = inventory[nganId].rows[hangId].items[index];
             if (confirm(`Xác nhận xuất túi máu [${item.barcode}] ra khỏi kho?`)) {
                 await checkoutItemAndLog(item);
                 loadDataFromSupabase();
-                alert(`✅ Đã xuất túi máu ${item.barcode} thành công!`);
+                alert(`✅ Đã xuất túi máu ${item.barcode} và cập nhật trạng thái thành công!`);
             }
         }
 
-        window.deleteSingleItem = async function(nganId, hangId, index) {
-            const item = inventory[nganId].rows[hangId].items[index];
-            if (confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA vĩnh viễn túi máu [${item.barcode}] khỏi hệ thống không?`)) {
-                if (item.id) {
-                    updateSyncStatus('🟡 Đang xóa túi máu...');
-                    const { error } = await _supabase
-                        .from('blood_units')
-                        .delete()
-                        .eq('id', item.id);
-
-                    if (error) {
-                        alert('Lỗi khi xóa: ' + error.message);
-                        updateSyncStatus('🔴 Lỗi xóa dữ liệu', true);
-                        return;
-                    }
-                }
-                loadDataFromSupabase();
-                alert(`🗑️ Đã xóa túi máu ${item.barcode} thành công!`);
-            }
-        }
-
+        // Xuất toàn bộ một hàng khay
         window.checkoutRow = async function(nganId, hangId) {
             const rowData = inventory[nganId]?.rows[hangId];
             if (!rowData || rowData.items.length === 0) {
@@ -555,10 +536,11 @@
                     await checkoutItemAndLog(item);
                 }
                 loadDataFromSupabase();
-                alert(`✅ Đã xuất toàn bộ hàng khay thành công!`);
+                alert(`✅ Đã xuất toàn bộ hàng khay và cập nhật trạng thái thành công!`);
             }
         }
 
+        // Xuất toàn bộ một Ngăn
         window.checkoutCompartment = async function(nganId) {
             let totalItems = 0;
             for (let r = 1; r <= totalRows; r++) {
@@ -578,7 +560,7 @@
                     }
                 }
                 loadDataFromSupabase();
-                alert(`✅ Đã xuất toàn bộ NGĂN ${nganId} thành công!`);
+                alert(`✅ Đã xuất toàn bộ NGĂN ${nganId} và cập nhật trạng thái thành công!`);
             }
         }
 
@@ -632,7 +614,6 @@
                             <td>${formatDateDisplay(item.hanSuDung)}</td>
                             <td>
                                 <button class="btn-checkout" title="Xuất túi này" onclick="checkoutSingleItem(${i}, ${r}, ${index})">🚀 Xuất</button>
-                                <button class="btn-delete-item" title="Xóa túi này" onclick="deleteSingleItem(${i}, ${r}, ${index})">🗑️ Xóa</button>
                             </td>
                         </tr>
                     `;
@@ -657,7 +638,7 @@
                                         <th>Nhóm / Rh</th>
                                         <th>Dung Tích</th>
                                         <th>Hạn Sử Dụng</th>
-                                        <th style="width: 105px;">Thao Tác</th>
+                                        <th style="width: 65px;">Thao Tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -771,7 +752,7 @@
                     - Vị trí: <b>NGĂN ${foundNgan} -> HÀNG ${foundHang}</b><br>
                     - Nhóm máu: <b>${found.nhom} (${found.rh})</b><br>
                     - Hạn sử dụng: <b>${formatDateDisplay(found.hanSuDung)}</b><br>
-                    <button class="btn-checkout" style="margin-top: 8px; width: 100%; padding: 6px;" onclick="checkoutSingleItem(${foundNgan}, ${foundHang}, ${foundIndex})">🚀 Xuất túi này</button>
+                    <button class="btn-checkout" style="margin-top: 8px; width: 100%; padding: 6px;" onclick="checkoutSingleItem(${foundNgan}, ${foundHang}, ${foundIndex})">🚀 Xuất túi này ra khỏi kho</button>
                 `;
             } else {
                 resultDiv.className = 'search-result not-found';
