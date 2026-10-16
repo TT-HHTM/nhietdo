@@ -331,15 +331,8 @@
         const totalRows = 4;
         let inventory = {};
 
-        function addDays(dateStr, days) {
-            if (!dateStr) return '';
-            const date = new Date(dateStr);
-            date.setDate(date.getDate() + days);
-            return date.toISOString().split('T')[0];
-        }
-
         function formatDateDisplay(dateStr) {
-            if (!dateStr) return '';
+            if (!dateStr) return 'Trống';
             const parts = dateStr.split('-');
             if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
             return dateStr;
@@ -443,7 +436,7 @@
             })
             .subscribe();
 
-        // Thêm/Quét túi máu vào kho sạch -> Chuyển status thành 'khosach'
+        // Thêm/Quét túi máu vào kho sạch: Cho phép nhập trực tiếp, thông tin mặc định là không xác định (Trống)
         document.getElementById('addBloodForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const nganId = document.getElementById('selectNgan').value;
@@ -453,31 +446,11 @@
             
             if (!barcodeTui) return;
 
-            updateSyncStatus('🟡 Đang tra cứu thông tin túi máu...');
-
-            let nhomMau = 'O';
-            let yeuToRh = 'Rh+';
-            let dungTich = 250;
-            let hanSuDung = addDays(new Date().toISOString().split('T')[0], 42);
-
-            const { data: existingBags, error: searchError } = await _supabase
-                .from('blood_units')
-                .select('*')
-                .eq('barcode_tui_mau', barcodeTui)
-                .limit(1);
-
-            if (!searchError && existingBags && existingBags.length > 0) {
-                const bagInfo = existingBags[0];
-                nhomMau = bagInfo.nhom_mau || 'Trống';
-                yeuToRh = bagInfo.yeu_to_rh || 'Trống';
-                dungTich = bagInfo.dung_tich || 'Trống';
-                hanSuDung = bagInfo.han_su_dung || '';
-            }
-
             const today = new Date().toISOString().split('T')[0];
 
             updateSyncStatus('🟡 Đang lưu vào Supabase...');
 
+            // Upsert trực tiếp túi máu vào Supabase với trạng thái 'khosach' và thông tin mặc định là Trống (không xác định)
             const { error } = await _supabase
                 .from('blood_units')
                 .upsert([
@@ -487,11 +460,11 @@
                         hang_khay: `HÀNG ${hangId}`,
                         barcode_khay: barcodeKhay || 'Trống',
                         barcode_tui_mau: barcodeTui,
-                        nhom_mau: nhomMau,
-                        yeu_to_rh: yeuToRh,
-                        dung_tich: dungTich,
+                        nhom_mau: 'Trống',
+                        yeu_to_rh: 'Trống',
+                        dung_tich: 'Trống',
                         ngay_nhap: today,
-                        han_su_dung: hanSuDung,
+                        han_su_dung: null,
                         status: 'khosach'
                     }
                 ], { onConflict: 'barcode_tui_mau' });
@@ -507,7 +480,7 @@
             loadDataFromSupabase();
         });
 
-        // Hàm sửa Barcode túi máu bị nhầm/sai trực tiếp trên cơ sở dữ liệu
+        // Hàm sửa Barcode túi máu trực tiếp trên cơ sở dữ liệu
         window.editSingleItemBarcode = async function(nganId, hangId, index) {
             const item = inventory[nganId].rows[hangId].items[index];
             const newBarcode = prompt(`Nhập lại mã Barcode mới cho túi máu (Mã hiện tại: ${item.barcode}):`, item.barcode);
@@ -519,21 +492,9 @@
                     return;
                 }
 
-                if (trimmedBarcode === item.barcode) return; // Không thay đổi gì
+                if (trimmedBarcode === item.barcode) return;
 
-                updateSyncStatus('🟡 Đang cập nhật mã barcode mới...');
-
-                // Kiểm tra xem mã mới đã tồn tại chưa
-                const { data: checkData, error: checkError } = await _supabase
-                    .from('blood_units')
-                    .select('id')
-                    .eq('barcode_tui_mau', trimmedBarcode);
-
-                if (!checkError && checkData && checkData.length > 0) {
-                    alert('❌ Lỗi: Mã barcode này đã tồn tại trong hệ thống!');
-                    updateSyncStatus('🟢 Đã đồng bộ với Supabase');
-                    return;
-                }
+                updateSyncStatus('🟡 Đang cập nhật mã barcode...');
 
                 if (item.id) {
                     const { error } = await _supabase
@@ -569,7 +530,6 @@
             }
         }
 
-        // Xuất toàn bộ hàng khay (nếu cần giữ nguyên tính năng hàng loạt này)
         async function checkoutItemAndLog(item) {
             await _supabase.from('checkout_logs').insert([{
                 tu_luu_tru: TU_LUU_TRU_ID,
@@ -643,7 +603,6 @@
             }
         }
 
-        // Tính năng Nhập mới: Chỉ làm sạch hiển thị trên màn hình
         window.clearAllData = function() {
             if (confirm("⚠️ CẢNH BÁO: Làm sạch hiển thị dữ liệu trên màn hình này? (Dữ liệu trên Supabase không bị ảnh hưởng)")) {
                 inventory = initInventory();
@@ -671,7 +630,7 @@
                         <tr class="${rowClass}">
                             <td><b>${index + 1}</b></td>
                             <td>${item.barcode} ${isWarning ? '⚠️ (Sắp hết hạn)' : ''}</td>
-                            <td>${item.nhom} (${item.rh})</td>
+                            <td>${item.nhom} ${item.rh !== 'Trống' ? '(' + item.rh + ')' : ''}</td>
                             <td>${item.dungTich === 'Trống' ? 'Trống' : item.dungTich + 'ml'}</td>
                             <td>${item.hanSuDung ? formatDateDisplay(item.hanSuDung) : 'Trống'}</td>
                             <td>
