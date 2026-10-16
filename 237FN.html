@@ -730,11 +730,12 @@
             }
         }
 
-        window.clearAllData = async function() {
-            if (confirm("⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA TẤT CẢ dữ liệu kho máu 36-TTB237 trên Supabase?")) {
-                await _supabase.from('blood_units').delete().eq('tu_luu_tru', '36-TTB237');
-                loadDataFromSupabase();
-                alert("Đã xóa toàn bộ dữ liệu kho!");
+        window.clearAllData = function() {
+            if (confirm("⚠️ CẢNH BÁO: Bạn có chắc chắn muốn làm sạch hiển thị toàn bộ dữ liệu trên màn hình này không? (Dữ liệu trên Supabase không bị ảnh hưởng)")) {
+                inventory = initInventory();
+                renderView();
+                updateSyncStatus('🟢 Đã làm sạch hiển thị giao diện');
+                alert("Đã xóa hiển thị trên giao diện thành công!");
             }
         }
 
