@@ -246,15 +246,15 @@
 
     <div class="header">
         <a href="index.html" class="btn-back-menu">⬅ TRỞ VỀ MENU</a>
-        <h1>HỆ THỐNG PHẦN MỀM QUẢN LÝ KHO SẠCH (36-TTB236) - SUPABASE</h1>
+        <h1>HỆ THỐNG QUẢN LÝ KHO SẠCH (36-TTB236) - NHẬP & XUẤT KHO</h1>
         <div id="syncStatus" class="sync-status">🟢 Đang kết nối Supabase...</div>
     </div>
 
     <div class="container">
         <div class="main-content">
-            <!-- Form Nhập Nhanh Barcode Kho Sạch -->
+            <!-- Form Nhập Kho Sạch -->
             <div class="card">
-                <h3>Nhập Nhanh Túi Máu Vào Hàng Khay (Kho Sạch)</h3>
+                <h3>Nhập Kho Sạch (Cập nhật trạng thái: khosach)</h3>
                 <form id="addBloodForm" style="display: grid; grid-template-columns: 1fr 1fr 1.5fr 2fr 90px; gap: 8px; align-items: end;">
                     <div class="form-group">
                         <label>Vị trí Ngăn</label>
@@ -278,7 +278,7 @@
                         <input type="text" id="barcodeTui" placeholder="Quét/Nhập mã túi..." required autofocus>
                     </div>
                     <div class="form-group">
-                        <button type="submit" style="height: 36px;">Thêm</button>
+                        <button type="submit" style="height: 36px;">Nhập Kho</button>
                     </div>
                 </form>
             </div>
@@ -298,7 +298,7 @@
             <div class="card">
                 <h3>Quản Lý Dữ Liệu</h3>
                 <button class="btn-success" onclick="exportToExcel()">📊 Báo Cáo Excel Tổng</button>
-                <button class="btn-clear-all" onclick="clearAllData()">🗑 Nhập mới</button>
+                <button class="btn-clear-all" onclick="clearAllData()">🗑 Nhập mới (Làm sạch màn hình)</button>
             </div>
 
             <div class="card">
@@ -328,7 +328,7 @@
         </div>
     </div>
 
-    <!-- Script tích hợp Supabase cho 36-TTB236 -->
+    <!-- Script xử lý logic Supabase -->
     <script>
         const SUPABASE_URL = 'https://hbebizzldisahoonbrtn.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_Ob78HELQ_uFN2VvIRjPWig_2ZfUpYGL';
@@ -353,7 +353,6 @@
             return dateStr;
         }
 
-        // Kiểm tra hạn sử dụng dưới 20 ngày
         function isExpiringSoon(hanSuDungStr) {
             if (!hanSuDungStr) return false;
             const today = new Date();
@@ -401,13 +400,14 @@
             }
         }
 
+        // Tải dữ liệu kho sạch (lọc các túi có status = 'khosach')
         async function loadDataFromSupabase() {
             updateSyncStatus('🟡 Đang tải dữ liệu từ Supabase...');
             const { data, error } = await _supabase
                 .from('blood_units')
                 .select('*')
                 .eq('tu_luu_tru', TU_LUU_TRU_ID)
-                .eq('status', 'available');
+                .eq('status', 'khosach');
 
             if (error) {
                 console.error("Lỗi tải Supabase:", error);
@@ -451,7 +451,7 @@
             })
             .subscribe();
 
-        // Thêm nhanh mã Barcode vào kho: Tự động lấy thông tin từ Supabase nếu có, nếu không tìm thấy sẽ để trống/mặc định
+        // Thêm/Quét túi máu vào kho sạch -> Chuyển status thành 'khosach'[cite: 9]
         document.getElementById('addBloodForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const nganId = document.getElementById('selectNgan').value;
@@ -500,7 +500,7 @@
                         dung_tich: dungTich,
                         ngay_nhap: today,
                         han_su_dung: hanSuDung,
-                        status: 'available'
+                        status: 'khosach'
                     }
                 ], { onConflict: 'barcode_tui_mau' });
 
@@ -515,7 +515,7 @@
             loadDataFromSupabase();
         });
 
-        // Hàm ghi log lịch sử xuất kho và chuyển trạng thái thành 'exported' (đã xuất) thay vì xóa hẳn
+        // Hàm xử lý xuất kho: Cập nhật status thành 'xuatkho' và ghi log[cite: 9]
         async function checkoutItemAndLog(item) {
             await _supabase.from('checkout_logs').insert([{
                 tu_luu_tru: TU_LUU_TRU_ID,
@@ -527,7 +527,7 @@
             }]);
 
             if (item.id) {
-                await _supabase.from('blood_units').update({ status: 'exported' }).eq('id', item.id);
+                await _supabase.from('blood_units').update({ status: 'xuatkho' }).eq('id', item.id);
             }
         }
 
@@ -537,18 +537,18 @@
             if (confirm(`Xác nhận xuất túi máu [${item.barcode}] ra khỏi kho?`)) {
                 await checkoutItemAndLog(item);
                 loadDataFromSupabase();
-                alert(`✅ Đã xuất túi máu ${item.barcode} và cập nhật trạng thái thành công!`);
+                alert(`✅ Đã xuất túi máu ${item.barcode} thành công!`);
             }
         }
 
-        // Xóa hẳn từng túi máu đơn lẻ khỏi cơ sở dữ liệu
+        // Xóa đơn lẻ khỏi giao diện tủ
         window.deleteSingleItem = async function(nganId, hangId, index) {
             const item = inventory[nganId].rows[hangId].items[index];
-            if (confirm(`⚠️ XÁC NHẬN XÓA: Bạn có chắc chắn muốn xóa hẳn túi máu [${item.barcode}] khỏi hệ thống không?`)) {
+            if (confirm(`⚠️ XÁC NHẬN XÓA: Xóa túi máu [${item.barcode}] khỏi hệ thống?`)) {
                 if (item.id) {
                     const { error } = await _supabase.from('blood_units').delete().eq('id', item.id);
                     if (error) {
-                        alert('Lỗi khi xóa túi máu: ' + error.message);
+                        alert('Lỗi khi xóa: ' + error.message);
                         return;
                     }
                 }
@@ -557,7 +557,7 @@
             }
         }
 
-        // Xuất toàn bộ một hàng khay
+        // Xuất toàn bộ hàng khay
         window.checkoutRow = async function(nganId, hangId) {
             const rowData = inventory[nganId]?.rows[hangId];
             if (!rowData || rowData.items.length === 0) {
@@ -565,12 +565,12 @@
                 return;
             }
 
-            if (confirm(`Xác nhận xuất toàn bộ ${rowData.items.length} túi máu ở Ngăn ${nganId} - Hàng ${hangId}?`)) {
+            if (confirm(`Xác nhận xuất toàn bộ ${rowData.items.length} túi ở Ngăn ${nganId} - Hàng ${hangId}?`)) {
                 for (let item of rowData.items) {
                     await checkoutItemAndLog(item);
                 }
                 loadDataFromSupabase();
-                alert(`✅ Đã xuất toàn bộ hàng khay và cập nhật trạng thái thành công!`);
+                alert(`✅ Đã xuất toàn bộ hàng khay thành công!`);
             }
         }
 
@@ -582,7 +582,7 @@
             }
 
             if (totalItems === 0) {
-                alert(`Ngăn ${nganId} hiện đang trống!`);
+                alert(`Ngăn ${nganId} đang trống!`);
                 return;
             }
 
@@ -594,7 +594,7 @@
                     }
                 }
                 loadDataFromSupabase();
-                alert(`✅ Đã xuất toàn bộ NGĂN ${nganId} và cập nhật trạng thái thành công!`);
+                alert(`✅ Đã xuất toàn bộ NGĂN ${nganId} thành công!`);
             }
         }
 
@@ -617,12 +617,13 @@
             }
         }
 
+        // Tính năng Nhập mới: Chỉ làm sạch hiển thị trên màn hình, không ảnh hưởng Supabase[cite: 9]
         window.clearAllData = function() {
-            if (confirm("⚠️ CẢNH BÁO: Bạn có chắc chắn muốn làm sạch hiển thị toàn bộ dữ liệu trên màn hình này không? (Dữ liệu trên Supabase không bị ảnh hưởng)")) {
+            if (confirm("⚠️ CẢNH BÁO: Làm sạch hiển thị dữ liệu trên màn hình này? (Dữ liệu trên Supabase không bị ảnh hưởng)")) {
                 inventory = initInventory();
                 renderView();
                 updateSyncStatus('🟢 Đã làm sạch hiển thị giao diện');
-                alert("Đã xóa hiển thị trên giao diện thành công!");
+                alert("Đã làm sạch màn hình thành công!");
             }
         }
 
