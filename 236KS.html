@@ -385,7 +385,7 @@
             }
         }
 
-        // Tải dữ liệu kho sạch (lọc các túi có status = 'khosach')
+        // Tải dữ liệu kho sạch (lọc các túi có status = 'khosach') và đọc đúng dữ liệu từ bảng blood_units
         async function loadDataFromSupabase() {
             updateSyncStatus('🟡 Đang tải dữ liệu từ Supabase...');
             const { data, error } = await _supabase
@@ -436,7 +436,7 @@
             })
             .subscribe();
 
-        // Thêm/Quét túi máu vào kho sạch: Cho phép nhập trực tiếp, thông tin mặc định là không xác định (Trống)
+        // Xử lý quét/nhập túi máu: Giữ lại dữ liệu sẵn có trên Supabase nếu mã túi đã tồn tại, tránh ghi đè thành trống
         document.getElementById('addBloodForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const nganId = document.getElementById('selectNgan').value;
@@ -450,24 +450,51 @@
 
             updateSyncStatus('🟡 Đang lưu vào Supabase...');
 
-            // Upsert trực tiếp túi máu vào Supabase với trạng thái 'khosach' và thông tin mặc định là Trống (không xác định)
-            const { error } = await _supabase
+            // Kiểm tra xem túi máu đã có sẵn trong bảng blood_units hay chưa
+            const { data: existingData, error: fetchError } = await _supabase
                 .from('blood_units')
-                .upsert([
-                    {
+                .select('*')
+                .eq('barcode_tui_mau', barcodeTui)
+                .maybeSingle();
+
+            if (fetchError) {
+                alert('Lỗi kiểm tra dữ liệu: ' + fetchError.message);
+                updateSyncStatus('🔴 Lỗi kết nối', true);
+                return;
+            }
+
+            let error;
+            if (existingData) {
+                // Nếu đã tồn tại: Chỉ cập nhật vị trí ngăn/hàng, barcode khay, ngày nhập và trạng thái, giữ nguyên nhóm máu, thể tích, hạn sử dụng cũ
+                const { error: updateError } = await _supabase
+                    .from('blood_units')
+                    .update({
                         tu_luu_tru: TU_LUU_TRU_ID,
                         ngan: `NGĂN ${nganId}`,
                         hang_khay: `HÀNG ${hangId}`,
                         barcode_khay: barcodeKhay || 'Trống',
-                        barcode_tui_mau: barcodeTui,
-                        nhom_mau: 'Trống',
-                        yeu_to_rh: 'Trống',
-                        dung_tich: 'Trống',
                         ngay_nhap: today,
-                        han_su_dung: null,
                         status: 'khosach'
-                    }
-                ], { onConflict: 'barcode_tui_mau' });
+                    })
+                    .eq('barcode_tui_mau', barcodeTui);
+                error = updateError;
+            } else {
+                // Nếu chưa có: Tạo mới bản ghi
+                const { error: insertError } = await _supabase
+                    .from('blood_units')
+                    .insert([
+                        {
+                            tu_luu_tru: TU_LUU_TRU_ID,
+                            ngan: `NGĂN ${nganId}`,
+                            hang_khay: `HÀNG ${hangId}`,
+                            barcode_khay: barcodeKhay || 'Trống',
+                            barcode_tui_mau: barcodeTui,
+                            ngay_nhap: today,
+                            status: 'khosach'
+                        }
+                    ]);
+                error = insertError;
+            }
 
             if (error) {
                 alert('Lỗi khi lưu vào Supabase: ' + error.message);
