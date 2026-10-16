@@ -400,6 +400,7 @@
             }
         }
 
+        // Hàm đọc dữ liệu từ Supabase và cập nhật vào kho
         async function loadDataFromSupabase() {
             updateSyncStatus('🟡 Đang tải dữ liệu từ Supabase...');
             const { data, error } = await _supabase
@@ -443,6 +444,7 @@
             updateSyncStatus('🟢 Đã đồng bộ với Supabase');
         }
 
+        // Lắng nghe thay đổi thời gian thực từ Supabase
         const realtimeChannel = _supabase
             .channel('public:blood_units_236')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'blood_units' }, (payload) => {
@@ -450,7 +452,7 @@
             })
             .subscribe();
 
-        // Thêm nhanh mã Barcode vào kho (Sử dụng upsert để cập nhật lại trạng thái available nếu túi cũ đã xuất và đưa trở lại kho)
+        // Thêm nhanh mã Barcode vào kho (Sử dụng upsert)
         document.getElementById('addBloodForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const nganId = document.getElementById('selectNgan').value;
@@ -495,9 +497,8 @@
             loadDataFromSupabase();
         });
 
-        // Hàm ghi log lịch sử xuất kho và chuyển trạng thái thành 'exported' (đã xuất) thay vì xóa hẳn
+        // Hàm ghi log lịch sử xuất kho và chuyển trạng thái thành 'exported'
         async function checkoutItemAndLog(item) {
-            // 1. Lưu vào bảng lịch sử xuất kho
             await _supabase.from('checkout_logs').insert([{
                 tu_luu_tru: TU_LUU_TRU_ID,
                 barcode_tui_mau: item.barcode,
@@ -507,7 +508,6 @@
                 han_su_dung: item.hanSuDung
             }]);
 
-            // 2. Cập nhật status thành 'exported' trong bảng blood_units để lưu lại thông tin đã xuất
             if (item.id) {
                 await _supabase.from('blood_units').update({ status: 'exported' }).eq('id', item.id);
             }
@@ -809,6 +809,7 @@
             `;
         }
 
+        // Tự động gọi đọc dữ liệu khi trang vừa tải xong
         loadDataFromSupabase();
     </script>
 </body>
