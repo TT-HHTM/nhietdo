@@ -522,7 +522,8 @@
                     let statusColor = "#333";
                     const status = data.status;
 
-                    if (status === 'available') {
+                    // Mặc định 'nhapkho' hoạt động và hiển thị như 'available' (kho thô)
+                    if (status === 'available' || status === 'nhapkho') {
                         statusText = "Đang trong kho thô";
                         statusColor = "var(--primary-color)";
                     } else if (status === 'khosach') {
@@ -555,9 +556,9 @@
                         cabinetLink = cabinetMapping[tuLuuTru] || '#';
                     }
 
-                    // Hiển thị thêm thông tin chi tiết và nút đi tới tủ nếu ở kho thô hoặc kho sạch
+                    // Hiển thị thêm thông tin chi tiết và nút đi tới tủ nếu ở kho thô (bao gồm 'available' và 'nhapkho') hoặc kho sạch
                     let extraInfo = "";
-                    if (status === 'available' || status === 'khosach') {
+                    if (status === 'available' || status === 'nhapkho' || status === 'khosach') {
                         const nhomMauFull = (data.nhom_mau ?? '') + ' ' + (data.yeu_to_rh ?? '');
                         
                         let gotoBtnHtml = tuLuuTru ? `<div style="margin-top: 6px;"><a href="${cabinetLink}" class="btn-goto-cabinet">👉 Tới tủ ${tuLuuTru} &rarr;</a></div>` : '';
