@@ -119,6 +119,7 @@
         .btn-clear-all { background-color: #c62828; }
         .btn-warning { background-color: #ef6c00; color: white; padding: 2px 6px; font-size: 0.75em; width: auto; border-radius: 3px; margin-left: 4px; cursor: pointer; }
         .btn-checkout { background-color: #d32f2f; color: white; padding: 2px 6px; font-size: 0.75em; width: auto; border-radius: 3px; margin-right: 2px; cursor: pointer; }
+        .btn-delete-item { background-color: #b71c1c; color: white; padding: 2px 6px; font-size: 0.75em; width: auto; border-radius: 3px; cursor: pointer; }
 
         .grid-layout {
             display: grid;
@@ -206,14 +207,6 @@
         }
 
         th { background-color: #f0f0f0; }
-
-        .btn-danger {
-            background-color: #c62828;
-            padding: 2px 5px;
-            font-size: 0.75em;
-            width: auto;
-            border-radius: 3px;
-        }
 
         .row-warning {
             background-color: #ffebee !important;
@@ -400,7 +393,6 @@
             }
         }
 
-        // Hàm đọc dữ liệu từ Supabase và cập nhật vào kho
         async function loadDataFromSupabase() {
             updateSyncStatus('🟡 Đang tải dữ liệu từ Supabase...');
             const { data, error } = await _supabase
@@ -444,7 +436,6 @@
             updateSyncStatus('🟢 Đã đồng bộ với Supabase');
         }
 
-        // Lắng nghe thay đổi thời gian thực từ Supabase
         const realtimeChannel = _supabase
             .channel('public:blood_units_236')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'blood_units' }, (payload) => {
@@ -452,7 +443,6 @@
             })
             .subscribe();
 
-        // Thêm nhanh mã Barcode vào kho (Sử dụng upsert)
         document.getElementById('addBloodForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const nganId = document.getElementById('selectNgan').value;
@@ -497,7 +487,6 @@
             loadDataFromSupabase();
         });
 
-        // Hàm ghi log lịch sử xuất kho và chuyển trạng thái thành 'exported'
         async function checkoutItemAndLog(item) {
             await _supabase.from('checkout_logs').insert([{
                 tu_luu_tru: TU_LUU_TRU_ID,
@@ -513,17 +502,37 @@
             }
         }
 
-        // Xuất từng túi máu đơn lẻ
         window.checkoutSingleItem = async function(nganId, hangId, index) {
             const item = inventory[nganId].rows[hangId].items[index];
             if (confirm(`Xác nhận xuất túi máu [${item.barcode}] ra khỏi kho?`)) {
                 await checkoutItemAndLog(item);
                 loadDataFromSupabase();
-                alert(`✅ Đã xuất túi máu ${item.barcode} và cập nhật trạng thái thành công!`);
+                alert(`✅ Đã xuất túi máu ${item.barcode} thành công!`);
             }
         }
 
-        // Xuất toàn bộ một hàng khay
+        // Thêm hàm xóa trực tiếp một túi máu khỏi cơ sở dữ liệu trên Supabase
+        window.deleteSingleItem = async function(nganId, hangId, index) {
+            const item = inventory[nganId].rows[hangId].items[index];
+            if (confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA vĩnh viễn túi máu [${item.barcode}] khỏi hệ thống không?`)) {
+                if (item.id) {
+                    updateSyncStatus('🟡 Đang xóa túi máu...');
+                    const { error } = await _supabase
+                        .from('blood_units')
+                        .delete()
+                        .eq('id', item.id);
+
+                    if (error) {
+                        alert('Lỗi khi xóa: ' + error.message);
+                        updateSyncStatus('🔴 Lỗi xóa dữ liệu', true);
+                        return;
+                    }
+                }
+                loadDataFromSupabase();
+                alert(`🗑️ Đã xóa túi máu ${item.barcode} thành công!`);
+            }
+        }
+
         window.checkoutRow = async function(nganId, hangId) {
             const rowData = inventory[nganId]?.rows[hangId];
             if (!rowData || rowData.items.length === 0) {
@@ -536,11 +545,10 @@
                     await checkoutItemAndLog(item);
                 }
                 loadDataFromSupabase();
-                alert(`✅ Đã xuất toàn bộ hàng khay và cập nhật trạng thái thành công!`);
+                alert(`✅ Đã xuất toàn bộ hàng khay thành công!`);
             }
         }
 
-        // Xuất toàn bộ một Ngăn
         window.checkoutCompartment = async function(nganId) {
             let totalItems = 0;
             for (let r = 1; r <= totalRows; r++) {
@@ -560,7 +568,7 @@
                     }
                 }
                 loadDataFromSupabase();
-                alert(`✅ Đã xuất toàn bộ NGĂN ${nganId} và cập nhật trạng thái thành công!`);
+                alert(`✅ Đã xuất toàn bộ NGĂN ${nganId} thành công!`);
             }
         }
 
@@ -614,6 +622,7 @@
                             <td>${formatDateDisplay(item.hanSuDung)}</td>
                             <td>
                                 <button class="btn-checkout" title="Xuất túi này" onclick="checkoutSingleItem(${i}, ${r}, ${index})">🚀 Xuất</button>
+                                <button class="btn-delete-item" title="Xóa túi này" onclick="deleteSingleItem(${i}, ${r}, ${index})">🗑️ Xóa</button>
                             </td>
                         </tr>
                     `;
@@ -638,7 +647,7 @@
                                         <th>Nhóm / Rh</th>
                                         <th>Dung Tích</th>
                                         <th>Hạn Sử Dụng</th>
-                                        <th style="width: 65px;">Thao Tác</th>
+                                        <th style="width: 105px;">Thao Tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -752,7 +761,7 @@
                     - Vị trí: <b>NGĂN ${foundNgan} -> HÀNG ${foundHang}</b><br>
                     - Nhóm máu: <b>${found.nhom} (${found.rh})</b><br>
                     - Hạn sử dụng: <b>${formatDateDisplay(found.hanSuDung)}</b><br>
-                    <button class="btn-checkout" style="margin-top: 8px; width: 100%; padding: 6px;" onclick="checkoutSingleItem(${foundNgan}, ${foundHang}, ${foundIndex})">🚀 Xuất túi này ra khỏi kho</button>
+                    <button class="btn-checkout" style="margin-top: 8px; width: 100%; padding: 6px;" onclick="checkoutSingleItem(${foundNgan}, ${foundHang}, ${foundIndex})">🚀 Xuất túi này</button>
                 `;
             } else {
                 resultDiv.className = 'search-result not-found';
@@ -809,7 +818,6 @@
             `;
         }
 
-        // Tự động gọi đọc dữ liệu khi trang vừa tải xong
         loadDataFromSupabase();
     </script>
 </body>
