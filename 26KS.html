@@ -330,7 +330,7 @@
         }
 
         function formatDateDisplay(dateStr) {
-            if (!dateStr) return '';
+            if (!dateStr) return 'Trống';
             const parts = dateStr.split('-');
             if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
             return dateStr;
@@ -434,7 +434,7 @@
             })
             .subscribe();
 
-        // Thêm/Quét túi máu vào kho sạch -> Chuyển status thành 'khosach'[cite: 1]
+        // Xử lý quét/nhập túi máu: Giữ lại dữ liệu sẵn có trên Supabase nếu mã túi đã tồn tại, tránh ghi đè thành trống
         document.getElementById('addBloodForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const nganId = document.getElementById('selectNgan').value;
@@ -444,48 +444,55 @@
             
             if (!barcodeTui) return;
 
-            updateSyncStatus('🟡 Đang tra cứu thông tin túi máu...');
-
-            let nhomMau = 'O';
-            let yeuToRh = 'Rh+';
-            let dungTich = 250;
-            let hanSuDung = addDays(new Date().toISOString().split('T')[0], 42);
-
-            const { data: existingBags, error: searchError } = await _supabase
-                .from('blood_units')
-                .select('*')
-                .eq('barcode_tui_mau', barcodeTui)
-                .limit(1);
-
-            if (!searchError && existingBags && existingBags.length > 0) {
-                const bagInfo = existingBags[0];
-                nhomMau = bagInfo.nhom_mau || 'Trống';
-                yeuToRh = bagInfo.yeu_to_rh || 'Trống';
-                dungTich = bagInfo.dung_tich || 'Trống';
-                hanSuDung = bagInfo.han_su_dung || '';
-            }
-
             const today = new Date().toISOString().split('T')[0];
 
             updateSyncStatus('🟡 Đang lưu vào Supabase...');
 
-            const { error } = await _supabase
+            // Kiểm tra xem túi máu đã có sẵn trong bảng blood_units hay chưa
+            const { data: existingData, error: fetchError } = await _supabase
                 .from('blood_units')
-                .upsert([
-                    {
+                .select('*')
+                .eq('barcode_tui_mau', barcodeTui)
+                .maybeSingle();
+
+            if (fetchError) {
+                alert('Lỗi kiểm tra dữ liệu: ' + fetchError.message);
+                updateSyncStatus('🔴 Lỗi kết nối', true);
+                return;
+            }
+
+            let error;
+            if (existingData) {
+                // Nếu đã tồn tại: Chỉ cập nhật vị trí ngăn/hàng, barcode khay, ngày nhập và trạng thái, giữ nguyên nhóm máu, thể tích, hạn sử dụng cũ
+                const { error: updateError } = await _supabase
+                    .from('blood_units')
+                    .update({
                         tu_luu_tru: TU_LUU_TRU_ID,
                         ngan: `NGĂN ${nganId}`,
                         hang_khay: `HÀNG ${hangId}`,
                         barcode_khay: barcodeKhay || 'Trống',
-                        barcode_tui_mau: barcodeTui,
-                        nhom_mau: nhomMau,
-                        yeu_to_rh: yeuToRh,
-                        dung_tich: dungTich,
                         ngay_nhap: today,
-                        han_su_dung: hanSuDung,
                         status: 'khosach'
-                    }
-                ], { onConflict: 'barcode_tui_mau' });
+                    })
+                    .eq('barcode_tui_mau', barcodeTui);
+                error = updateError;
+            } else {
+                // Nếu chưa có: Tạo mới bản ghi
+                const { error: insertError } = await _supabase
+                    .from('blood_units')
+                    .insert([
+                        {
+                            tu_luu_tru: TU_LUU_TRU_ID,
+                            ngan: `NGĂN ${nganId}`,
+                            hang_khay: `HÀNG ${hangId}`,
+                            barcode_khay: barcodeKhay || 'Trống',
+                            barcode_tui_mau: barcodeTui,
+                            ngay_nhap: today,
+                            status: 'khosach'
+                        }
+                    ]);
+                error = insertError;
+            }
 
             if (error) {
                 alert('Lỗi khi lưu vào Supabase: ' + error.message);
@@ -628,7 +635,7 @@
                         <tr class="${rowClass}">
                             <td><b>${index + 1}</b></td>
                             <td>${item.barcode} ${isWarning ? '⚠️ (Sắp hết hạn)' : ''}</td>
-                            <td>${item.nhom} (${item.rh})</td>
+                            <td>${item.nhom} ${item.rh !== 'Trống' ? '(' + item.rh + ')' : ''}</td>
                             <td>${item.dungTich === 'Trống' ? 'Trống' : item.dungTich + 'ml'}</td>
                             <td>${item.hanSuDung ? formatDateDisplay(item.hanSuDung) : 'Trống'}</td>
                             <td>
@@ -829,4 +836,3 @@
     </script>
 </body>
 </html>
-```[cite: 1]
