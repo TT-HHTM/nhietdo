@@ -118,7 +118,7 @@
         .btn-info { background-color: #0288d1; margin-bottom: 8px; }
         .btn-clear-all { background-color: #c62828; }
         .btn-warning { background-color: #ef6c00; color: white; padding: 2px 6px; font-size: 0.75em; width: auto; border-radius: 3px; margin-left: 4px; cursor: pointer; }
-        .btn-checkout { background-color: #d32f2f; color: white; padding: 2px 6px; font-size: 0.75em; width: auto; border-radius: 3px; margin-right: 2px; cursor: pointer; }
+        .btn-edit-item { background-color: #0288d1; color: white; padding: 2px 6px; font-size: 0.75em; width: auto; border-radius: 3px; margin-right: 2px; cursor: pointer; }
         .btn-delete-item { background-color: #b71c1c; color: white; padding: 2px 6px; font-size: 0.75em; width: auto; border-radius: 3px; cursor: pointer; margin-left: 2px; }
 
         .grid-layout {
@@ -208,14 +208,6 @@
 
         th { background-color: #f0f0f0; }
 
-        .btn-danger {
-            background-color: #c62828;
-            padding: 2px 5px;
-            font-size: 0.75em;
-            width: auto;
-            border-radius: 3px;
-        }
-
         .row-warning {
             background-color: #ffebee !important;
             color: #c62828;
@@ -246,7 +238,7 @@
 
     <div class="header">
         <a href="index.html" class="btn-back-menu">⬅ TRỞ VỀ MENU</a>
-        <h1>HỆ THỐNG QUẢN LÝ KHO SẠCH (36-TTB236) - NHẬP & XUẤT KHO</h1>
+        <h1>HỆ THỐNG QUẢN LÝ KHO SẠCH (36-TTB236) - NHẬP & SỬA KHO</h1>
         <div id="syncStatus" class="sync-status">🟢 Đang kết nối Supabase...</div>
     </div>
 
@@ -302,7 +294,7 @@
             </div>
 
             <div class="card">
-                <h3>Tìm Kiếm & Xuất Nhanh</h3>
+                <h3>Tìm Kiếm & Sửa Nhanh</h3>
                 <div class="form-group">
                     <input type="text" id="searchInput" placeholder="Nhập Barcode túi máu..." onkeyup="if(event.key === 'Enter') searchBloodBag()">
                 </div>
@@ -451,7 +443,7 @@
             })
             .subscribe();
 
-        // Thêm/Quét túi máu vào kho sạch -> Chuyển status thành 'khosach'[cite: 9]
+        // Thêm/Quét túi máu vào kho sạch -> Chuyển status thành 'khosach'
         document.getElementById('addBloodForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const nganId = document.getElementById('selectNgan').value;
@@ -515,29 +507,49 @@
             loadDataFromSupabase();
         });
 
-        // Hàm xử lý xuất kho: Cập nhật status thành 'xuatkho' và ghi log[cite: 9]
-        async function checkoutItemAndLog(item) {
-            await _supabase.from('checkout_logs').insert([{
-                tu_luu_tru: TU_LUU_TRU_ID,
-                barcode_tui_mau: item.barcode,
-                nhom_mau: item.nhom,
-                yeu_to_rh: item.rh,
-                dung_tich: item.dungTich,
-                han_su_dung: item.hanSuDung
-            }]);
-
-            if (item.id) {
-                await _supabase.from('blood_units').update({ status: 'xuatkho' }).eq('id', item.id);
-            }
-        }
-
-        // Xuất từng túi máu đơn lẻ
-        window.checkoutSingleItem = async function(nganId, hangId, index) {
+        // Hàm sửa Barcode túi máu bị nhầm/sai trực tiếp trên cơ sở dữ liệu
+        window.editSingleItemBarcode = async function(nganId, hangId, index) {
             const item = inventory[nganId].rows[hangId].items[index];
-            if (confirm(`Xác nhận xuất túi máu [${item.barcode}] ra khỏi kho?`)) {
-                await checkoutItemAndLog(item);
+            const newBarcode = prompt(`Nhập lại mã Barcode mới cho túi máu (Mã hiện tại: ${item.barcode}):`, item.barcode);
+            
+            if (newBarcode !== null) {
+                const trimmedBarcode = newBarcode.trim();
+                if (!trimmedBarcode) {
+                    alert("Mã barcode không được để trống!");
+                    return;
+                }
+
+                if (trimmedBarcode === item.barcode) return; // Không thay đổi gì
+
+                updateSyncStatus('🟡 Đang cập nhật mã barcode mới...');
+
+                // Kiểm tra xem mã mới đã tồn tại chưa
+                const { data: checkData, error: checkError } = await _supabase
+                    .from('blood_units')
+                    .select('id')
+                    .eq('barcode_tui_mau', trimmedBarcode);
+
+                if (!checkError && checkData && checkData.length > 0) {
+                    alert('❌ Lỗi: Mã barcode này đã tồn tại trong hệ thống!');
+                    updateSyncStatus('🟢 Đã đồng bộ với Supabase');
+                    return;
+                }
+
+                if (item.id) {
+                    const { error } = await _supabase
+                        .from('blood_units')
+                        .update({ barcode_tui_mau: trimmedBarcode })
+                        .eq('id', item.id);
+
+                    if (error) {
+                        alert('Lỗi khi cập nhật barcode: ' + error.message);
+                        updateSyncStatus('🔴 Lỗi cập nhật', true);
+                        return;
+                    }
+                }
+
                 loadDataFromSupabase();
-                alert(`✅ Đã xuất túi máu ${item.barcode} thành công!`);
+                alert(`✅ Đã cập nhật mã barcode thành công thành: ${trimmedBarcode}`);
             }
         }
 
@@ -557,7 +569,22 @@
             }
         }
 
-        // Xuất toàn bộ hàng khay
+        // Xuất toàn bộ hàng khay (nếu cần giữ nguyên tính năng hàng loạt này)
+        async function checkoutItemAndLog(item) {
+            await _supabase.from('checkout_logs').insert([{
+                tu_luu_tru: TU_LUU_TRU_ID,
+                barcode_tui_mau: item.barcode,
+                nhom_mau: item.nhom,
+                yeu_to_rh: item.rh,
+                dung_tich: item.dungTich,
+                han_su_dung: item.hanSuDung
+            }]);
+
+            if (item.id) {
+                await _supabase.from('blood_units').update({ status: 'xuatkho' }).eq('id', item.id);
+            }
+        }
+
         window.checkoutRow = async function(nganId, hangId) {
             const rowData = inventory[nganId]?.rows[hangId];
             if (!rowData || rowData.items.length === 0) {
@@ -574,7 +601,6 @@
             }
         }
 
-        // Xuất toàn bộ một Ngăn
         window.checkoutCompartment = async function(nganId) {
             let totalItems = 0;
             for (let r = 1; r <= totalRows; r++) {
@@ -617,7 +643,7 @@
             }
         }
 
-        // Tính năng Nhập mới: Chỉ làm sạch hiển thị trên màn hình, không ảnh hưởng Supabase[cite: 9]
+        // Tính năng Nhập mới: Chỉ làm sạch hiển thị trên màn hình
         window.clearAllData = function() {
             if (confirm("⚠️ CẢNH BÁO: Làm sạch hiển thị dữ liệu trên màn hình này? (Dữ liệu trên Supabase không bị ảnh hưởng)")) {
                 inventory = initInventory();
@@ -649,7 +675,7 @@
                             <td>${item.dungTich === 'Trống' ? 'Trống' : item.dungTich + 'ml'}</td>
                             <td>${item.hanSuDung ? formatDateDisplay(item.hanSuDung) : 'Trống'}</td>
                             <td>
-                                <button class="btn-checkout" title="Xuất túi này" onclick="checkoutSingleItem(${i}, ${r}, ${index})">🚀 Xuất</button>
+                                <button class="btn-edit-item" title="Sửa barcode túi này" onclick="editSingleItemBarcode(${i}, ${r}, ${index})">✏️ Sửa</button>
                                 <button class="btn-delete-item" title="Xóa túi này" onclick="deleteSingleItem(${i}, ${r}, ${index})">🗑 Xóa</button>
                             </td>
                         </tr>
@@ -790,7 +816,7 @@
                     - Nhóm máu: <b>${found.nhom} (${found.rh})</b><br>
                     - Hạn sử dụng: <b>${found.hanSuDung ? formatDateDisplay(found.hanSuDung) : 'Trống'}</b><br>
                     <div style="display: flex; gap: 5px; margin-top: 8px;">
-                        <button class="btn-checkout" style="flex: 1; padding: 6px;" onclick="checkoutSingleItem(${foundNgan}, ${foundHang}, ${foundIndex})">🚀 Xuất</button>
+                        <button class="btn-edit-item" style="flex: 1; padding: 6px;" onclick="editSingleItemBarcode(${foundNgan}, ${foundHang}, ${foundIndex})">✏️ Sửa</button>
                         <button class="btn-delete-item" style="flex: 1; padding: 6px;" onclick="deleteSingleItem(${foundNgan}, ${foundHang}, ${foundIndex})">🗑 Xóa</button>
                     </div>
                 `;
