@@ -173,7 +173,6 @@
             font-weight: bold;
             font-size: 1.1em;
             color: var(--primary-color);
-            margin-bottom: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -181,6 +180,32 @@
             padding: 8px 12px;
             border-radius: 6px;
             border-left: 5px solid var(--primary-color);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .compartment-header:hover {
+            background-color: #ffcdd2;
+        }
+
+        .compartment-header .header-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-icon {
+            font-size: 0.8em;
+            transition: transform 0.2s ease;
+        }
+
+        .compartment-body {
+            margin-top: 10px;
+            display: block;
+        }
+
+        .compartment-body.collapsed {
+            display: none;
         }
 
         .row-tray {
@@ -379,6 +404,12 @@
                 <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="importFromExcel(event)">
                 <button class="btn-info" onclick="document.getElementById('excelFileInput').click()">📥 Nhập File Excel</button>
                 <button class="btn-clear-all" onclick="clearAllData()">🗑 Nhập mới</button>
+                
+                <!-- Nút điều khiển Thu gọn / Mở rộng tất cả -->
+                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <button style="background-color: #607d8b; font-size: 0.85em; padding: 6px;" onclick="toggleAllCompartments(true)">📂 Thu gọn tất cả</button>
+                    <button style="background-color: #00897b; font-size: 0.85em; padding: 6px;" onclick="toggleAllCompartments(false)">📂 Mở tất cả</button>
+                </div>
             </div>
 
             <div class="card">
@@ -465,6 +496,12 @@
         const totalRows = 4;
         let inventory = {};
 
+        // Mặc định tất cả các ngăn đều ở trạng thái thu gọn (true)
+        let collapsedState = {};
+        for (let i = 1; i <= totalNgan; i++) {
+            collapsedState[i] = true;
+        }
+
         const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById('ngayNhap').value = todayStr;
 
@@ -528,7 +565,7 @@
             }
         }
 
-        // Tải dữ liệu từ Supabase lọc theo status = 'nhapkho' cho tủ 36-TTB23[cite: 13]
+        // Tải dữ liệu từ Supabase lọc theo status = 'nhapkho' cho tủ 36-TTB23[cite: 5]
         async function loadDataFromSupabase() {
             updateSyncStatus('🟡 Đang tải dữ liệu từ Supabase...');
             const { data, error } = await _supabase
@@ -579,7 +616,7 @@
             })
             .subscribe();
 
-        // Thêm túi máu mới với trạng thái 'nhapkho'[cite: 13]
+        // Thêm túi máu mới với trạng thái 'nhapkho'[cite: 5]
         document.getElementById('addBloodForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const nganId = document.getElementById('selectNgan').value;
@@ -709,7 +746,7 @@
             }
         }
 
-        // Tính năng "Nhập mới": Chỉ làm sạch hiển thị trên màn hình, không ảnh hưởng đến Supabase[cite: 13]
+        // Tính năng "Nhập mới": Chỉ làm sạch hiển thị trên màn hình, không ảnh hưởng đến Supabase[cite: 5]
         window.clearAllData = function() {
             if (confirm("⚠️ CẢNH BÁO: Bạn có chắc chắn muốn làm sạch hiển thị toàn bộ dữ liệu trên màn hình này không? (Dữ liệu trên Supabase không bị ảnh hưởng)")) {
                 inventory = initInventory();
@@ -717,6 +754,20 @@
                 updateSyncStatus('🟢 Đã làm sạch hiển thị giao diện');
                 alert("Đã làm sạch màn hình thành công! Bạn có thể tiếp tục nhập liệu mới.");
             }
+        }
+
+        // Hàm xử lý thu gọn / mở rộng từng ngăn khi bấm vào tiêu đề
+        window.toggleCompartment = function(nganId) {
+            collapsedState[nganId] = !collapsedState[nganId];
+            renderView();
+        }
+
+        // Hàm xử lý thu gọn / mở rộng tất cả các ngăn
+        window.toggleAllCompartments = function(isCollapse) {
+            for (let i = 1; i <= totalNgan; i++) {
+                collapsedState[i] = isCollapse;
+            }
+            renderView();
         }
 
         function createCompartmentBox(i) {
@@ -777,14 +828,21 @@
                 `;
             }
 
+            const isCollapsed = collapsedState[i];
+
             const box = document.createElement('div');
             box.className = 'compartment-box';
             box.innerHTML = `
-                <div class="compartment-header">
-                    <span>NGĂN ${i}</span>
+                <div class="compartment-header" onclick="toggleCompartment(${i})">
+                    <div class="header-info">
+                        <span class="toggle-icon">${isCollapsed ? '▶' : '▼'}</span>
+                        <span>NGĂN ${i}</span>
+                    </div>
                     <small>Tổng số: <b>${totalItemsInNgan}</b> túi</small>
                 </div>
-                ${rowsContentHtml}
+                <div class="compartment-body ${isCollapsed ? 'collapsed' : ''}">
+                    ${rowsContentHtml}
+                </div>
             `;
             return box;
         }
@@ -866,6 +924,12 @@
             }
 
             if (found) {
+                // Tự động mở rộng ngăn chứa túi máu tìm thấy nếu nó đang bị collapse
+                if (collapsedState[foundNgan]) {
+                    collapsedState[foundNgan] = false;
+                    renderView();
+                }
+
                 resultDiv.className = 'search-result';
                 resultDiv.innerHTML = `
                     <strong>Tìm thấy túi máu!</strong><br>
