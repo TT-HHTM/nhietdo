@@ -154,7 +154,6 @@
             font-weight: bold;
             font-size: 1.1em;
             color: var(--primary-color);
-            margin-bottom: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -162,6 +161,32 @@
             padding: 8px 12px;
             border-radius: 6px;
             border-left: 5px solid var(--primary-color);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .compartment-header:hover {
+            background-color: #c8e6c9;
+        }
+
+        .compartment-header .header-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-icon {
+            font-size: 0.8em;
+            transition: transform 0.2s ease;
+        }
+
+        .compartment-body {
+            margin-top: 10px;
+            display: block;
+        }
+
+        .compartment-body.collapsed {
+            display: none;
         }
 
         .row-tray {
@@ -291,6 +316,12 @@
                 <h3>Quản Lý Dữ Liệu</h3>
                 <button class="btn-success" onclick="exportToExcel()">📊 Báo Cáo Excel Tổng</button>
                 <button class="btn-clear-all" onclick="clearAllData()">🗑 Nhập mới (Làm sạch màn hình)</button>
+                
+                <!-- Nút điều khiển Thu gọn / Mở rộng tất cả -->
+                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <button style="background-color: #607d8b; font-size: 0.85em; padding: 6px;" onclick="toggleAllCompartments(true)">📂 Thu gọn tất cả</button>
+                    <button style="background-color: #00897b; font-size: 0.85em; padding: 6px;" onclick="toggleAllCompartments(false)">📂 Mở tất cả</button>
+                </div>
             </div>
 
             <div class="card">
@@ -330,6 +361,12 @@
         const totalNgan = 12;
         const totalRows = 4;
         let inventory = {};
+
+        // Mặc định tất cả các ngăn đều ở trạng thái thu gọn (true)
+        let collapsedState = {};
+        for (let i = 1; i <= totalNgan; i++) {
+            collapsedState[i] = true;
+        }
 
         function formatDateDisplay(dateStr) {
             if (!dateStr) return 'Trống';
@@ -385,7 +422,7 @@
             }
         }
 
-        // Tải dữ liệu kho sạch (lọc các túi có status = 'khosach') và đọc đúng dữ liệu từ bảng blood_units
+        // Tải dữ liệu kho sạch (lọc các túi có status = 'khosach')
         async function loadDataFromSupabase() {
             updateSyncStatus('🟡 Đang tải dữ liệu từ Supabase...');
             const { data, error } = await _supabase
@@ -430,13 +467,13 @@
         }
 
         const realtimeChannel = _supabase
-            .channel('public:blood_units_236')
+            .channel('public:blood_units_236_khosach')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'blood_units' }, (payload) => {
                 loadDataFromSupabase();
             })
             .subscribe();
 
-        // Xử lý quét/nhập túi máu: Giữ lại dữ liệu sẵn có trên Supabase nếu mã túi đã tồn tại, tránh ghi đè thành trống
+        // Xử lý quét/nhập túi máu
         document.getElementById('addBloodForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const nganId = document.getElementById('selectNgan').value;
@@ -450,7 +487,6 @@
 
             updateSyncStatus('🟡 Đang lưu vào Supabase...');
 
-            // Kiểm tra xem túi máu đã có sẵn trong bảng blood_units hay chưa
             const { data: existingData, error: fetchError } = await _supabase
                 .from('blood_units')
                 .select('*')
@@ -465,7 +501,6 @@
 
             let error;
             if (existingData) {
-                // Nếu đã tồn tại: Chỉ cập nhật vị trí ngăn/hàng, barcode khay, ngày nhập và trạng thái, giữ nguyên nhóm máu, thể tích, hạn sử dụng cũ
                 const { error: updateError } = await _supabase
                     .from('blood_units')
                     .update({
@@ -479,7 +514,6 @@
                     .eq('barcode_tui_mau', barcodeTui);
                 error = updateError;
             } else {
-                // Nếu chưa có: Tạo mới bản ghi
                 const { error: insertError } = await _supabase
                     .from('blood_units')
                     .insert([
@@ -507,7 +541,6 @@
             loadDataFromSupabase();
         });
 
-        // Hàm sửa Barcode túi máu trực tiếp trên cơ sở dữ liệu
         window.editSingleItemBarcode = async function(nganId, hangId, index) {
             const item = inventory[nganId].rows[hangId].items[index];
             const newBarcode = prompt(`Nhập lại mã Barcode mới cho túi máu (Mã hiện tại: ${item.barcode}):`, item.barcode);
@@ -541,7 +574,6 @@
             }
         }
 
-        // Xóa đơn lẻ khỏi giao diện tủ
         window.deleteSingleItem = async function(nganId, hangId, index) {
             const item = inventory[nganId].rows[hangId].items[index];
             if (confirm(`⚠️ XÁC NHẬN XÓA: Xóa túi máu [${item.barcode}] khỏi hệ thống?`)) {
@@ -639,6 +671,20 @@
             }
         }
 
+        // Hàm xử lý thu gọn / mở rộng từng ngăn
+        window.toggleCompartment = function(nganId) {
+            collapsedState[nganId] = !collapsedState[nganId];
+            renderView();
+        }
+
+        // Hàm xử lý thu gọn / mở rộng tất cả các ngăn
+        window.toggleAllCompartments = function(isCollapse) {
+            for (let i = 1; i <= totalNgan; i++) {
+                collapsedState[i] = isCollapse;
+            }
+            renderView();
+        }
+
         function createCompartmentBox(i) {
             const ngan = inventory[i] || { rows: { 1: { barcodeKhay: 'Trống', items: [] }, 2: { barcodeKhay: 'Trống', items: [] }, 3: { barcodeKhay: 'Trống', items: [] }, 4: { barcodeKhay: 'Trống', items: [] } } };
             let totalItemsInNgan = 0;
@@ -699,17 +745,24 @@
                 `;
             }
 
+            const isCollapsed = collapsedState[i];
+
             const box = document.createElement('div');
             box.className = 'compartment-box';
             box.innerHTML = `
-                <div class="compartment-header">
-                    <span>NGĂN ${i}</span>
+                <div class="compartment-header" onclick="toggleCompartment(${i})">
+                    <div class="header-info">
+                        <span class="toggle-icon">${isCollapsed ? '▶' : '▼'}</span>
+                        <span>NGĂN ${i}</span>
+                    </div>
                     <div>
-                        <button class="btn-warning" onclick="checkoutCompartment(${i})">🚀 Xuất Ngăn</button>
+                        <button class="btn-warning" onclick="event.stopPropagation(); checkoutCompartment(${i})">🚀 Xuất Ngăn</button>
                         <small style="margin-left: 8px;">Tổng: <b>${totalItemsInNgan}</b> túi</small>
                     </div>
                 </div>
-                ${rowsContentHtml}
+                <div class="compartment-body ${isCollapsed ? 'collapsed' : ''}">
+                    ${rowsContentHtml}
+                </div>
             `;
             return box;
         }
@@ -794,6 +847,12 @@
             }
 
             if (found) {
+                // Tự động mở rộng ngăn chứa túi máu tìm thấy nếu nó đang bị collapse
+                if (collapsedState[foundNgan]) {
+                    collapsedState[foundNgan] = false;
+                    renderView();
+                }
+
                 resultDiv.className = 'search-result';
                 resultDiv.innerHTML = `
                     <strong>Tìm thấy túi máu!</strong><br>
