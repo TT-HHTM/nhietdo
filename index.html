@@ -3,625 +3,605 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Quản Lý Kho Tủ Lạnh Chứa Máu</title>
-    <!-- Thư viện Supabase JS Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>Hệ Thống In Tem Máu Chéo & Hòa Hợp</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@500;700;900&display=swap" rel="stylesheet">
+
     <style>
-        :root {
-            --primary-color: #b71c1c;
-            --hover-color: #d32f2f;
-            --clean-primary: #2e7d32;
-            --clean-hover: #388e3c;
-            --bg-color: #f4f6f9;
-            --card-bg: #ffffff;
-            --text-color: #333333;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            position: relative;
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
         }
 
-        /* Ô tìm kiếm góc trên cùng bên trái */
-        #search-container {
-            position: absolute;
-            top: 20px;
-            left: 20px;
+        .mono {
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        /* ---------------- KÍCH THƯỚC TEM ỐNG CHÉO (50x30mm - 2 Tem/Hàng) ---------------- */
+        .row-50x30 {
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-start;
+            gap: 0;
+            width: 100mm;
+            margin: auto;
+            page-break-after: always;
+            page-break-inside: avoid;
+        }
+
+        .label-50x30 {
+            width: 50mm;
+            height: 30mm;
+            box-sizing: border-box;
             background: #ffffff;
-            padding: 10px 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            max-width: 320px;
-            width: 100%;
-        }
-
-        #search-container input {
-            padding: 6px 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            outline: none;
-        }
-
-        #search-container input:focus {
-            border-color: var(--primary-color);
-        }
-
-        #search-result {
-            font-size: 0.85rem;
-            color: #555;
-            min-height: 20px;
-            word-break: break-word;
-            line-height: 1.4;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            margin-top: 10px;
-        }
-
-        .header h1 {
-            color: #222;
-            font-size: 2.2rem;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .header p {
-            color: #666;
-            font-size: 1.1rem;
-        }
-
-        .section-title {
-            width: 100%;
-            max-width: 1200px;
-            margin: 30px 0 15px 0;
-            padding-bottom: 8px;
-            border-bottom: 3px solid #ddd;
-            font-size: 1.5rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .section-title.kho-tho {
-            color: var(--primary-color);
-            border-color: var(--primary-color);
-        }
-
-        .section-title.kho-sach {
-            color: var(--clean-primary);
-            border-color: var(--clean-primary);
-        }
-
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-            width: 100%;
-            max-width: 1200px;
-        }
-
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 25px 20px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid #000000;
+            padding: 1.5mm 2mm;
+            overflow: hidden;
+            position: relative;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            font-size: 7.5pt;
+            line-height: 1.15;
+            color: #000000 !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
         }
 
-        .card.tho {
-            border-top: 6px solid var(--primary-color);
+        /* ---------------- KÍCH THƯỚC TEM HÒA HỢP (100x30mm - 1 Tem/Hàng) ---------------- */
+        .row-100x30 {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            width: 100mm;
+            min-width: 100mm;
+            margin: auto;
+            page-break-after: always;
+            page-break-inside: avoid;
         }
 
-        .card.tho:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 25px rgba(183, 28, 28, 0.15);
-        }
-
-        .card.sach {
-            border-top: 6px solid var(--clean-primary);
-        }
-
-        .card.sach:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 25px rgba(46, 125, 50, 0.15);
-        }
-
-        .card-icon {
-            font-size: 3.2rem;
-            margin-bottom: 15px;
-        }
-
-        .card h2 {
-            color: #222;
-            font-size: 1.4rem;
-            margin-bottom: 10px;
-        }
-
-        .card p {
-            color: #666;
-            font-size: 0.9rem;
-            margin-bottom: 25px;
-            line-height: 1.5;
-        }
-
-        .btn {
-            display: inline-block;
-            color: #ffffff;
-            text-decoration: none;
-            padding: 12px 20px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 0.95rem;
-            transition: background-color 0.2s ease;
-        }
-
-        .btn.tho {
-            background-color: var(--primary-color);
-        }
-        .btn.tho:hover {
-            background-color: var(--hover-color);
-        }
-
-        .btn.sach {
-            background-color: var(--clean-primary);
-        }
-        .btn.sach:hover {
-            background-color: var(--clean-hover);
-        }
-
-        /* Nút đi tới tủ máu trong kết quả tìm kiếm */
-        .btn-goto-cabinet {
-            display: inline-block;
-            margin-top: 8px;
-            padding: 6px 12px;
-            background-color: #0277bd;
-            color: #ffffff;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            transition: background-color 0.2s;
-        }
-        .btn-goto-cabinet:hover {
-            background-color: #01579b;
-        }
-
-        /* Bảng theo dõi thông báo nhiệt độ từ Mail */
-        .mail-table {
-            width: 100%;
-            margin-top: 20px;
-            border-collapse: collapse;
-            font-size: 0.82rem;
-            text-align: left;
-            background-color: #fafafa;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
+        .label-100x30 {
+            font-family: 'Tahoma', Geneva, Verdana, sans-serif;
+            width: 100mm;
+            min-width: 100mm;
+            height: 30mm;
+            min-height: 30mm;
+            padding: 2mm 3.5mm;
+            background: #fff;
+            border: 1px dashed #999;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
             overflow: hidden;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            -webkit-print-color-adjust: exact;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
-        .mail-table th {
-            background-color: #f0f2f5;
-            color: #444;
-            padding: 6px 10px;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .mail-table td {
-            padding: 8px 10px;
-            vertical-align: middle;
-        }
-
-        .mail-table tr:first-child td {
-            border-bottom: 1px dotted #e0e0e0;
-        }
-
-        .mail-title {
-            font-weight: 600;
-            color: #222;
-            line-height: 1.3;
-        }
-
-        .mail-time {
-            color: #666;
-            font-size: 0.78rem;
-        }
-
-        footer {
-            margin-top: 50px;
-            color: #888;
-            font-size: 0.9rem;
+        .label-title-hh {
             text-align: center;
+            font-size: 11pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1.0;
+            margin-bottom: 0.5mm;
+            color: #000;
         }
 
-        /* Responsive cho mobile */
-        @media (max-width: 768px) {
+        .label-row-hh {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            font-size: 9pt;
+            line-height: 1.25;
+            color: #000;
+        }
+
+        .field-item {
+            white-space: nowrap;
+            display: flex;
+            align-items: baseline;
+        }
+
+        .field-label {
+            font-weight: bold;
+            margin-right: 3px;
+        }
+
+        .value {
+            font-weight: normal;
+        }
+
+        .val-bold {
+            font-weight: bold;
+            font-size: 9.5pt;
+        }
+
+        .val-blood {
+            font-weight: bold;
+            font-size: 10pt;
+            text-transform: uppercase;
+        }
+
+        /* PRINT STYLES */
+        @media print {
             body {
-                padding-top: 90px;
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
             }
-            #search-container {
-                top: 10px;
-                left: 10px;
-                right: 10px;
-                max-width: none;
+
+            .no-print {
+                display: none !important;
             }
+
+            .print-only {
+                display: block !important;
+            }
+
+            /* Chế độ in Tem Ống Chéo (100x30mm) */
+            body.print-mode-tube .row-50x30 {
+                border: none !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+                width: 100mm !important;
+                page-break-after: always !important;
+                page-break-inside: avoid !important;
+            }
+            body.print-mode-tube .label-50x30 {
+                border: none !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+                width: 50mm !important;
+                height: 30mm !important;
+            }
+
+            /* Chế độ in Tem Hòa Hợp (100x30mm) */
+            body.print-mode-harmony .row-100x30 {
+                border: none !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+                width: 100mm !important;
+                min-width: 100mm !important;
+                page-break-after: always !important;
+                page-break-inside: avoid !important;
+            }
+            body.print-mode-harmony .label-100x30 {
+                border: none !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+                width: 100mm !important;
+                min-width: 100mm !important;
+                height: 30mm !important;
+                min-height: 30mm !important;
+                padding: 1.5mm 3mm;
+            }
+
+            @page {
+                size: 100mm 30mm;
+                margin: 0;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
         }
     </style>
 </head>
-<body>
+<body class="bg-slate-100 min-h-screen">
 
-    <!-- Ô tìm kiếm túi máu góc trên bên trái -->
-    <div id="search-container">
-        <label for="blood-search-input" style="font-size: 0.8rem; font-weight: bold; color: #444;">🔍 Tìm nhanh túi máu:</label>
-        <input type="text" id="blood-search-input" placeholder="Nhập mã túi máu..." autocomplete="off">
-        <div id="search-result">Nhập mã để tìm kiếm...</div>
-    </div>
-
-    <div class="header">
-        <h1>Hệ Thống Quản Lý Kho Máu</h1>
-        <p>Vui lòng chọn hệ thống tủ lạnh cần quản lý</p>
-    </div>
-
-    <!-- PHẦN TRÊN: KHO THÔ -->
-    <h2 class="section-title kho-tho">📦 Kho Thô</h2>
-    <div class="grid-container">
-        <!-- Tủ TTB237 -->
-        <div class="card tho" id="cabinet-36-TTB237">
-            <div>
-                <div class="card-icon">❄️</div>
-                <h2>Tủ Lạnh 36-TTB237</h2>
-                <p>Hệ thống quản lý quy mô lớn gồm <b>12 ngăn chứa</b>.</p>
-            </div>
-            <div>
-                <a href="237FN.html" class="btn tho">Truy Cập Tủ 36-TTB237 &rarr;</a>
-                <table class="mail-table">
-                    <thead>
-                        <tr>
-                            <th colspan="2">📩 Thông báo nhiệt độ (Mail gần nhất)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="width: 70px;"><strong>Tiêu đề:</strong></td>
-                            <td><span class="mail-title">Đang tải...</span></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Thời gian:</strong></td>
-                            <td><span class="mail-time">--/--/---- --:--</span></td>
-                        </tr>
-                    </tbody>
-                </table>
+    <!-- Top Navigation Bar -->
+    <header class="bg-red-700 text-white shadow-md no-print sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white text-red-700 p-2 rounded-lg font-black text-xl flex items-center justify-center w-10 h-10 shadow">
+                    <i class="fa-solid font-bold fa-vial-virus"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold leading-tight">Hệ Thống In Tem Chế Phẩm Máu & Hòa Hợp</h1>
+                    <p class="text-xs text-red-100">Hỗ trợ: Tem Ống Chéo (50x30mm) & Tem Hòa Hợp (100x30mm)</p>
+                </div>
             </div>
         </div>
+    </header>
 
-        <!-- Tủ TTB25 -->
-        <div class="card tho" id="cabinet-36-TTB25">
-            <div>
-                <div class="card-icon">🧊</div>
-                <h2>Tủ Lạnh 36-TTB25</h2>
-                <p>Hệ thống quản lý quy mô vừa gồm <b>6 ngăn chứa</b>.</p>
-            </div>
-            <div>
-                <a href="25FN.html" class="btn tho">Truy Cập Tủ 36-TTB25 &rarr;</a>
-                <table class="mail-table">
-                    <thead>
-                        <tr>
-                            <th colspan="2">📩 Thông báo nhiệt độ (Mail gần nhất)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="width: 70px;"><strong>Tiêu đề:</strong></td>
-                            <td><span class="mail-title">Đang tải...</span></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Thời gian:</strong></td>
-                            <td><span class="mail-time">--/--/---- --:--</span></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto p-3 sm:p-6 no-print">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-        <!-- Tủ TTB23 -->
-        <div class="card tho" id="cabinet-36-TTB23">
-            <div>
-                <div class="card-icon">🌡️</div>
-                <h2>Tủ Lạnh 36-TTB23</h2>
-                <p>Hệ thống phần mềm quản lý kho thô gồm <b>6 ngăn chứa.</b></p>
-            </div>
-            <div>
-                <a href="23FN.html" class="btn tho">Truy Cập Tủ 36-TTB23 &rarr;</a>
-                <table class="mail-table">
-                    <thead>
-                        <tr>
-                            <th colspan="2">📩 Thông báo nhiệt độ (Mail gần nhất)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="width: 70px;"><strong>Tiêu đề:</strong></td>
-                            <td><span class="mail-title">Đang tải...</span></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Thời gian:</strong></td>
-                            <td><span class="mail-time">--/--/---- --:--</span></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            <!-- LEFT FORM COLUMN (INPUT) -->
+            <div class="lg:col-span-7 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                <div class="bg-slate-800 text-white px-5 py-3.5 flex justify-between items-center">
+                    <h2 class="font-semibold text-sm uppercase tracking-wide flex items-center gap-2">
+                        <i class="fa-solid fa-clipboard-user text-red-400"></i> Thông Tin Bệnh Nhân & Chế Phẩm
+                    </h2>
+                    <span id="product-count-badge" class="bg-red-600 text-white text-xs px-2.5 py-0.5 rounded-full font-bold">1 Chế phẩm</span>
+                </div>
 
-        <!-- Tủ TTB236 -->
-        <div class="card tho" id="cabinet-36-TTB236">
-            <div>
-                <div class="card-icon">❄️</div>
-                <h2>Tủ Lạnh 36-TTB236</h2>
-                <p>Hệ thống phần mềm quản lý kho thô gồm <b>12 ngăn chứa</b>.</p>
-            </div>
-            <div>
-                <a href="236FN.html" class="btn tho">Truy Cập Tủ 36-TTB236 &rarr;</a>
-                <table class="mail-table">
-                    <thead>
-                        <tr>
-                            <th colspan="2">📩 Thông báo nhiệt độ (Mail gần nhất)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="width: 70px;"><strong>Tiêu đề:</strong></td>
-                            <td><span class="mail-title">Đang tải...</span></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Thời gian:</strong></td>
-                            <td><span class="mail-time">--/--/---- --:--</span></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- PHẦN DƯỚI: KHO SẠCH -->
-    <h2 class="section-title kho-sach">✨ Kho Sạch</h2>
-    <div class="grid-container">
-        <!-- Tủ TTB26 (Kho Sạch) -->
-        <div class="card sach" id="cabinet-36-TTB26">
-            <div>
-                <div class="card-icon">🧪</div>
-                <h2>Tủ Lạnh 36-TTB26</h2>
-                <p>Hệ thống phần mềm quản lý kho sạch gồm <b>6 ngăn chứa</b>, hỗ trợ kiểm soát và quét barcode túi máu sạch.</p>
-            </div>
-            <div>
-                <a href="26KS.html" class="btn sach">Truy Cập Tủ 36-TTB26 &rarr;</a>
-                <table class="mail-table">
-                    <thead>
-                        <tr>
-                            <th colspan="2">📩 Thông báo nhiệt độ (Mail gần nhất)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="width: 70px;"><strong>Tiêu đề:</strong></td>
-                            <td><span class="mail-title">Đang tải...</span></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Thời gian:</strong></td>
-                            <td><span class="mail-time">--/--/---- --:--</span></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Tủ TTB236 (Kho Sạch) -->
-        <div class="card sach" id="cabinet-36-TTB236-Sach">
-            <div>
-                <div class="card-icon">❄️</div>
-                <h2>Tủ Lạnh 36-TTB236 (Sạch)</h2>
-                <p>Hệ thống phần mềm quản lý kho sạch gồm <b>12 ngăn chứa</b> (6 trái, 6 phải) với 3 hàng khay mỗi ngăn.</p>
-            </div>
-            <div>
-                <a href="236KS.html" class="btn sach">Truy Cập Tủ 36-TTB236 &rarr;</a>
-                <table class="mail-table">
-                    <thead>
-                        <tr>
-                            <th colspan="2">📩 Thông báo nhiệt độ (Mail gần nhất)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="width: 70px;"><strong>Tiêu đề:</strong></td>
-                            <td><span class="mail-title">Đang tải...</span></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Thời gian:</strong></td>
-                            <td><span class="mail-time">--/--/---- --:--</span></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <footer>
-        <p>&copy; Hệ Thống Phần Mềm Quản Lý Kho Máu - Trung Tâm Máu</p>
-    </footer>
-
-    <!-- Script kết nối tự động lấy dữ liệu từ Google Apps Script và Supabase -->
-    <script>
-        const SUPABASE_URL = 'https://hbebizzldisahoonbrtn.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_Ob78HELQ_uFN2VvIRjPWig_2ZfUpYGL'; 
-        
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        const searchInput = document.getElementById('blood-search-input');
-        const searchResult = document.getElementById('search-result');
-
-        let searchTimeout = null;
-        searchInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            const query = this.value.trim();
-            
-            if (!query) {
-                searchResult.innerHTML = "Nhập mã để tìm kiếm...";
-                searchResult.style.color = "#555";
-                return;
-            }
-
-            searchResult.innerHTML = "Đang tìm kiếm...";
-            searchResult.style.color = "#888";
-
-            searchTimeout = setTimeout(async () => {
-                try {
-                    const { data, error } = await supabaseClient
-                        .from('blood_units') 
-                        .select('*')
-                        .eq('barcode_tui_mau', query)
-                        .maybeSingle();
-
-                    if (error) {
-                        console.error("Lỗi Supabase:", error);
-                        searchResult.innerHTML = "Lỗi CSDL: " + error.message;
-                        searchResult.style.color = "red";
-                        return;
-                    }
-
-                    if (!data) {
-                        searchResult.innerHTML = "Không tìm thấy túi máu!";
-                        searchResult.style.color = "red";
-                        return;
-                    }
-
-                    let statusText = "";
-                    let statusColor = "#333";
-                    const status = data.status;
-
-                    // Mặc định 'nhapkho' hoạt động và hiển thị như 'available' (kho thô)
-                    if (status === 'available' || status === 'nhapkho') {
-                        statusText = "Đang trong kho thô";
-                        statusColor = "var(--primary-color)";
-                    } else if (status === 'khosach') {
-                        statusText = "Nhập kho sạch";
-                        statusColor = "var(--clean-primary)";
-                    } else if (status === 'xuatkho') {
-                        statusText = "Xuất kho";
-                        statusColor = "#e65100";
-                    } else {
-                        statusText = "Trạng thái: " + (status || "Không xác định");
-                    }
-
-                    let tuLuuTru = data.tu_luu_tru ?? '';
-                    let cabinetLink = '#';
-
-                    // Xử lý đường dẫn liên kết tùy theo tủ và trạng thái kho sạch/kho thô
-                    if (tuLuuTru === '36-TTB236') {
-                        if (status === 'khosach') {
-                            cabinetLink = '236KS.html';
-                        } else {
-                            cabinetLink = '236FN.html';
-                        }
-                    } else {
-                        const cabinetMapping = {
-                            '36-TTB237': '237FN.html',
-                            '36-TTB25': '25FN.html',
-                            '36-TTB23': '23FN.html',
-                            '36-TTB26': '26KS.html'
-                        };
-                        cabinetLink = cabinetMapping[tuLuuTru] || '#';
-                    }
-
-                    // Hiển thị thêm thông tin chi tiết và nút đi tới tủ nếu ở kho thô (bao gồm 'available' và 'nhapkho') hoặc kho sạch
-                    let extraInfo = "";
-                    if (status === 'available' || status === 'nhapkho' || status === 'khosach') {
-                        const nhomMauFull = (data.nhom_mau ?? '') + ' ' + (data.yeu_to_rh ?? '');
+                <div class="p-4 sm:p-5 space-y-5 overflow-y-auto max-h-[calc(100vh-160px)]">
+                    
+                    <!-- Patient Info Section -->
+                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-user-hospital text-slate-700"></i> Hành Chính Bệnh Nhân
+                        </h3>
                         
-                        let gotoBtnHtml = tuLuuTru ? `<div style="margin-top: 6px;"><a href="${cabinetLink}" class="btn-goto-cabinet">👉 Tới tủ ${tuLuuTru} &rarr;</a></div>` : '';
-
-                        extraInfo = `
-                            <div style="margin-top: 6px; font-size: 0.8rem; color: #444; border-top: 1px dashed #ddd; padding-top: 4px; text-align: left;">
-                                <div><b>Nhóm máu:</b> ${nhomMauFull.trim() || 'N/A'}</div>
-                                <div><b>Thể tích:</b> ${data.dung_tich ?? 'N/A'}</div>
-                                <div><b>Tủ / Ngăn:</b> ${tuLuuTru || 'N/A'} / ${data.ngan ?? 'N/A'}</div>
-                                <div><b>Hàng khay:</b> ${data.hang_khay ?? 'N/A'}</div>
-                                <div><b>Barcode khay:</b> ${data.barcode_khay ?? 'N/A'}</div>
-                                <div><b>STT trong khay:</b> ${data.stt_trong_khay ?? 'N/A'}</div>
-                                ${gotoBtnHtml}
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-medium text-slate-700 mb-1">Họ và tên Bệnh Nhân <span class="text-red-500">*</span></label>
+                                <input type="text" id="patientName" placeholder="Nhập họ và tên..." oninput="renderLabels()" class="w-full text-sm font-semibold uppercase px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500 focus:outline-none bg-white">
                             </div>
-                        `;
-                    }
+                            <div>
+                                <label class="block text-xs font-medium text-slate-700 mb-1">Tuổi:</label>
+                                <input type="text" id="patientAge" placeholder="Nhập tuổi..." oninput="renderLabels()" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500 focus:outline-none bg-white">
+                            </div>
+                        </div>
 
-                    searchResult.innerHTML = `Kết quả: <b style="color: ${statusColor}">${statusText}</b>${extraInfo}`;
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="sm:col-span-1">
+                                <label class="block text-xs font-medium text-slate-700 mb-1">Khoa / Phòng</label>
+                                <input type="text" id="department" placeholder="Nhập khoa/phòng..." oninput="renderLabels()" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500 focus:outline-none bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-700 mb-1">Nhóm Máu BN</label>
+                                <select id="patientABO" onchange="renderLabels()" class="w-full text-sm font-bold px-2.5 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500 focus:outline-none bg-white">
+                                    <option value="">-- Chọn --</option>
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                    <option value="O">O</option>
+                                    <option value="AB">AB</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-700 mb-1">Yếu tố Rh(D)</label>
+                                <select id="patientRh" onchange="renderLabels()" class="w-full text-sm font-bold px-2.5 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500 focus:outline-none bg-white">
+                                    <option value="+">Rh(+)</option>
+                                    <option value="-">Rh(-)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
 
-                } catch (err) {
-                    console.error("Lỗi kết nối:", err);
-                    searchResult.innerHTML = "Lỗi kết nối đến cơ sở dữ liệu.";
-                    searchResult.style.color = "red";
-                }
-            }, 400);
+                    <!-- Dynamic Blood Products List -->
+                    <div>
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-box-archive text-red-600"></i> Danh Sách Chế Phẩm Máu
+                            </h3>
+                            <button onclick="addProduct()" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded shadow transition flex items-center gap-1">
+                                <i class="fa-solid fa-plus"></i> Thêm Chế Phẩm
+                            </button>
+                        </div>
+
+                        <!-- Product Form Cards Container -->
+                        <div id="product-list" class="space-y-3"></div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- RIGHT PREVIEW COLUMN -->
+            <div class="lg:col-span-5 space-y-4">
+
+                <!-- Mode Switcher & Controls -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                    <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-print text-red-600"></i> Chọn Chế Độ In Riêng Biệt
+                    </h3>
+
+                    <!-- Print View Selection Tabs -->
+                    <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-lg">
+                        <button id="btn-mode-tube" onclick="setPrintMode('tube')" class="py-2 text-xs font-bold rounded-md shadow-sm bg-white text-red-700 flex items-center justify-center gap-1.5 border border-slate-200 transition">
+                            <i class="fa-solid fa-vial"></i> In Tem Ống Chéo (50x30)
+                        </button>
+                        <button id="btn-mode-harmony" onclick="setPrintMode('harmony')" class="py-2 text-xs font-bold rounded-md text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5 transition">
+                            <i class="fa-solid fa-file-lines"></i> In Tem Hòa Hợp (100x30)
+                        </button>
+                    </div>
+
+                    <!-- Action Print Button -->
+                    <button onclick="executePrint()" class="w-full py-3 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold rounded-lg shadow-lg hover:shadow-red-200 transition flex items-center justify-center gap-2 text-base">
+                        <i class="fa-solid fa-print text-lg"></i> <span id="print-btn-text">IN TEM ỐNG CHÉO NGAY</span>
+                    </button>
+                    
+                    <p id="print-note" class="text-[11px] text-slate-500 text-center italic">
+                        * Khổ tem ống chéo: 100x30mm (2 tem song song, mỗi tem 50x30mm). Thiết lập lề = None.
+                    </p>
+                </div>
+
+                <!-- Live Preview Panel Container -->
+                <div class="bg-slate-800 p-4 rounded-xl shadow-inner min-h-[500px] flex flex-col">
+                    <div class="flex justify-between items-center pb-3 mb-3 border-b border-slate-700 text-slate-300">
+                        <span id="preview-title" class="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-eye text-emerald-400"></i> Xem Trước: Tem Ống Chéo (50x30mm)
+                        </span>
+                        <span id="preview-count-info" class="text-xs font-mono bg-slate-700 px-2 py-0.5 rounded text-slate-300">01 Hàng</span>
+                    </div>
+
+                    <!-- Interactive Live Preview Scrollable Area -->
+                    <div class="flex-1 overflow-y-auto max-h-[600px] p-2 space-y-4 flex flex-col items-center justify-start rounded bg-slate-900/50 border border-slate-700/50">
+                        <div id="live-preview-container" class="w-full flex flex-col items-center space-y-4"></div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- PRINT ONLY CONTAINER -->
+    <div id="print-area" class="hidden print-only"></div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        let products = [];
+        let currentMode = 'tube'; // 'tube' hoặc 'harmony'
+
+        window.addEventListener('DOMContentLoaded', () => {
+            addProduct();
+            renderLabels();
         });
 
-        // Lấy dữ liệu nhiệt độ từ Google Apps Script
-        const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx1Cz2TIpI-vEH-qDOfYu76-M4v9uaf4lttzTFLPSQLEtCI1vhrMFpvhRG5qSjiEvkxlg/exec";
+        function setPrintMode(mode) {
+            currentMode = mode;
+            const btnTube = document.getElementById('btn-mode-tube');
+            const btnHarmony = document.getElementById('btn-mode-harmony');
+            const printBtnText = document.getElementById('print-btn-text');
+            const previewTitle = document.getElementById('preview-title');
+            const printNote = document.getElementById('print-note');
 
-        async function fetchTemperatureData() {
-            try {
-                let response = await fetch(APP_SCRIPT_URL);
-                let data = await response.json();
+            if (mode === 'tube') {
+                btnTube.className = "py-2 text-xs font-bold rounded-md shadow-sm bg-white text-red-700 flex items-center justify-center gap-1.5 border border-slate-200 transition";
+                btnHarmony.className = "py-2 text-xs font-bold rounded-md text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5 transition";
+                printBtnText.innerText = "IN TEM ỐNG CHÉO NGAY";
+                previewTitle.innerHTML = `<i class="fa-solid fa-eye text-emerald-400"></i> Xem Trước: Tem Ống Chéo (50x30mm)`;
+                printNote.innerText = "* Khổ tem ống chéo: 100x30mm (2 tem song song, mỗi tem 50x30mm). Thiết lập lề = None.";
+            } else {
+                btnHarmony.className = "py-2 text-xs font-bold rounded-md shadow-sm bg-white text-red-700 flex items-center justify-center gap-1.5 border border-slate-200 transition";
+                btnTube.className = "py-2 text-xs font-bold rounded-md text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5 transition";
+                printBtnText.innerText = "IN TEM HÒA HỢP NGAY";
+                previewTitle.innerHTML = `<i class="fa-solid fa-eye text-emerald-400"></i> Xem Trước: Tem Hòa Hợp (1 Tem/Dòng - 100x30mm)`;
+                printNote.innerText = "* Khổ tem hòa hợp: 100x30mm (1 tem độc lập mỗi dòng). Thiết lập lề = None.";
+            }
+            renderLabels();
+        }
 
-                for (let code in data) {
-                    let cardElement = document.getElementById('cabinet-' + code);
-                    if (cardElement) {
-                        let titleEl = cardElement.querySelector('.mail-title');
-                        let timeEl = cardElement.querySelector('.mail-time');
+        function addProduct() {
+            const id = Date.now() + Math.random().toString(36).substr(2, 4);
+            const firstProd = products.length > 0 ? products[0] : null;
 
-                        if (titleEl) titleEl.innerText = data[code].title;
-                        if (timeEl) timeEl.innerText = data[code].time;
-                    }
+            products.push({
+                id: id,
+                name: firstProd ? firstProd.name : "",
+                code: "",
+                abo: firstProd ? firstProd.abo : "",
+                rh: firstProd ? firstProd.rh : "+"
+            });
+            renderProductInputs();
+            renderLabels();
+        }
 
-                    if (code === '36-TTB236') {
-                        let cardSachElement = document.getElementById('cabinet-36-TTB236-Sach');
-                        if (cardSachElement) {
-                            let titleEl = cardSachElement.querySelector('.mail-title');
-                            let timeEl = cardSachElement.querySelector('.mail-time');
+        function removeProduct(id) {
+            if (products.length <= 1) {
+                alert("Cần ít nhất 01 chế phẩm máu trong danh sách!");
+                return;
+            }
+            products = products.filter(p => p.id !== id);
+            renderProductInputs();
+            renderLabels();
+        }
 
-                            if (titleEl) titleEl.innerText = data[code].title;
-                            if (timeEl) timeEl.innerText = data[code].time;
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error("Lỗi khi tải dữ liệu từ trang tính:", error);
+        function renderProductInputs() {
+            const container = document.getElementById('product-list');
+            document.getElementById('product-count-badge').innerText = `${products.length} Chế phẩm`;
+
+            container.innerHTML = products.map((prod, idx) => `
+                <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 relative hover:border-slate-300 transition" id="prod-card-${prod.id}">
+                    <div class="flex justify-between items-center mb-2 pb-1 border-b border-slate-200">
+                        <span class="text-xs font-bold text-red-700 flex items-center gap-1">
+                            <span class="w-5 h-5 bg-red-100 text-red-800 rounded-full flex items-center justify-center text-[10px] font-black">${idx + 1}</span>
+                            TÚI CHẾ PHẨM #${idx + 1}
+                        </span>
+                        ${products.length > 1 ? `
+                            <button onclick="removeProduct('${prod.id}')" class="text-slate-400 hover:text-red-600 text-xs px-1.5 py-0.5 rounded" title="Xóa túi này">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                        <div class="sm:col-span-6">
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-0.5">Tên Chế Phẩm</label>
+                            <input type="text" value="${prod.name}" placeholder="VD: Khối hồng cầu..." oninput="updateProductField('${prod.id}', 'name', this.value.toUpperCase())" class="w-full text-xs font-bold uppercase px-2.5 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-red-500 bg-white">
+                        </div>
+                        <div class="sm:col-span-6">
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-0.5">Mã Chế Phẩm</label>
+                            <input type="text" value="${prod.code}" placeholder="Nhập mã chế phẩm..." oninput="updateProductField('${prod.id}', 'code', this.value)" class="w-full text-xs font-mono font-bold px-2.5 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-red-500 bg-white">
+                        </div>
+                        <div class="sm:col-span-6">
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-0.5">ABO CP</label>
+                            <select onchange="updateProductField('${prod.id}', 'abo', this.value)" class="w-full text-xs font-bold px-2 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-red-500 bg-white">
+                                <option value="" ${prod.abo === '' ? 'selected' : ''}>-- Chọn --</option>
+                                <option value="A" ${prod.abo === 'A' ? 'selected' : ''}>A</option>
+                                <option value="B" ${prod.abo === 'B' ? 'selected' : ''}>B</option>
+                                <option value="O" ${prod.abo === 'O' ? 'selected' : ''}>O</option>
+                                <option value="AB" ${prod.abo === 'AB' ? 'selected' : ''}>AB</option>
+                            </select>
+                        </div>
+                        <div class="sm:col-span-6">
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-0.5">Rh CP</label>
+                            <select onchange="updateProductField('${prod.id}', 'rh', this.value)" class="w-full text-xs font-bold px-2 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-red-500 bg-white">
+                                <option value="+" ${prod.rh === '+' ? 'selected' : ''}>Rh(+)</option>
+                                <option value="-" ${prod.rh === '-' ? 'selected' : ''}>Rh(-)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateProductField(id, field, value) {
+            const prod = products.find(p => p.id === id);
+            if (prod) {
+                prod[field] = value;
+                renderLabels();
             }
         }
 
-        document.addEventListener("DOMContentLoaded", fetchTemperatureData);
-        setInterval(fetchTemperatureData, 300000);
+        // Template cho Tem Ống Chéo (50x30mm - 2 Tem/Hàng) - Đã ép màu chữ #000000
+        function createTubeLabelHTML(prod, idx) {
+            const patientName = document.getElementById('patientName').value.trim();
+            const department = document.getElementById('department').value.trim();
+            const patientABO = document.getElementById('patientABO').value;
+            const patientRh = document.getElementById('patientRh').value;
+
+            return `
+                <div class="label-50x30 rounded sm:rounded-none shadow-md" style="color: #000000 !important;">
+                    <div class="flex justify-between items-center border-b border-black pb-0.5 font-bold text-[7pt]" style="color: #000000 !important;">
+                        <span class="truncate max-w-[32mm] uppercase">MÁU CHÉO - ${department || '...'}</span>
+                        <span>${idx + 1}/${products.length}</span>
+                    </div>
+                    <div class="mt-0.5">
+                        <div class="font-bold text-[8.5pt] leading-none truncate uppercase" style="color: #000000 !important;">${patientName || '....................'}</div>
+                        <div class="flex justify-between items-center text-[7pt] mt-0.5" style="color: #000000 !important;">
+                            <span>Khoa: <strong style="color: #000000 !important;">${department || '...'}</strong></span>
+                            <span style="color: #000000 !important; font-weight: bold; font-size: 6.5pt;">BN: ${patientABO ? patientABO + patientRh : '...'}</span>
+                        </div>
+                    </div>
+                    <div class="border-t border-b border-dashed my-0.5 py-0.5 bg-white" style="border-color: #000000 !important; color: #000000 !important;">
+                        <div class="font-black text-[7.5pt] uppercase leading-tight truncate" style="color: #000000 !important;">CP: ${prod.name || '...'}</div>
+                        <div class="flex justify-between text-[6.5pt] font-semibold" style="color: #000000 !important;">
+                            <span>Nhóm CP: <strong style="color: #000000 !important;">${prod.abo ? prod.abo + prod.rh : '...'}</strong></span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col justify-center items-center my-auto py-0.5 text-center" style="color: #000000 !important;">
+                        <span class="text-[6.5pt] font-semibold uppercase leading-none" style="color: #000000 !important;">Mã chế phẩm</span>
+                        <span class="mono font-black text-[11pt] tracking-wider leading-tight" style="color: #000000 !important;">${prod.code || '----------'}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Template cho Tem Hòa Hợp (100x30mm - 1 Tem/Dòng)
+        function createHarmonyLabelHTML(prod, idx) {
+            const name = document.getElementById('patientName').value.trim() || '..............................................';
+            const age = document.getElementById('patientAge').value.trim() || '.........';
+            const dept = document.getElementById('department').value.trim() || '........................................';
+            const bg_pt = document.getElementById('patientABO').value;
+            const rh = document.getElementById('patientRh').value;
+            const bg_pt_display = bg_pt ? `${bg_pt} Rh(${rh})` : '.........';
+            const bg_prod = prod.abo ? `${prod.abo} Rh(${prod.rh})` : '.........';
+
+            return `
+                <div class="label-100x30 rounded sm:rounded-none shadow-md">
+                    <div class="label-title-hh">TEM HÒA HỢP</div>
+                    
+                    <!-- Dòng 1 -->
+                    <div class="label-row-hh">
+                        <div class="field-item">
+                            <span class="field-label">Họ và tên:</span>
+                            <span class="value val-bold uppercase">${name}</span>
+                        </div>
+                        <div class="field-item">
+                            <span class="field-label">Tuổi:</span>
+                            <span class="value">${age}</span>
+                        </div>
+                    </div>
+
+                    <!-- Dòng 2 -->
+                    <div class="label-row-hh">
+                        <div class="field-item">
+                            <span class="field-label">Khoa:</span>
+                            <span class="value">${dept}</span>
+                        </div>
+                        <div class="field-item">
+                            <span class="field-label">Nhóm máu:</span>
+                            <span class="value val-blood">${bg_pt_display}</span>
+                        </div>
+                    </div>
+
+                    <!-- Dòng 3 -->
+                    <div class="label-row-hh">
+                        <div class="field-item">
+                            <span class="field-label">Tên CP:</span>
+                            <span class="value">${prod.name || '....................'}</span>
+                        </div>
+                        <div class="field-item">
+                            <span class="field-label">Mã túi:</span>
+                            <span class="value mono font-black text-[11pt] leading-none">${prod.code || '..........'}</span>
+                        </div>
+                        <div class="field-item">
+                            <span class="field-label">Nhóm máu:</span>
+                            <span class="value val-blood">${bg_prod}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderLabels() {
+            const previewContainer = document.getElementById('live-preview-container');
+            document.getElementById('preview-count-info').innerText = `${products.length} Tem`;
+
+            let rowsHTML = '';
+            
+            if (currentMode === 'tube') {
+                const rowCount = Math.ceil(products.length / 2);
+                document.getElementById('preview-count-info').innerText = `${rowCount} Hàng (${products.length} Tem)`;
+                for (let i = 0; i < products.length; i += 2) {
+                    const prod1 = products[i];
+                    const prod2 = products[i + 1];
+                    rowsHTML += `
+                        <div class="row-50x30">
+                            ${createTubeLabelHTML(prod1, i)}
+                            ${prod2 ? createTubeLabelHTML(prod2, i + 1) : '<div class="label-50x30" style="visibility: hidden; border: none; box-shadow: none;"></div>'}
+                        </div>
+                    `;
+                }
+            } else {
+                products.forEach((prod, i) => {
+                    rowsHTML += `
+                        <div class="row-100x30">
+                            ${createHarmonyLabelHTML(prod, i)}
+                        </div>
+                    `;
+                });
+            }
+
+            previewContainer.innerHTML = rowsHTML;
+        }
+
+        function executePrint() {
+            const printArea = document.getElementById('print-area');
+            const liveContainer = document.getElementById('live-preview-container');
+
+            printArea.innerHTML = liveContainer.innerHTML;
+            document.body.classList.remove('print-mode-tube', 'print-mode-harmony');
+            
+            if (currentMode === 'tube') {
+                document.body.classList.add('print-mode-tube');
+            } else {
+                document.body.classList.add('print-mode-harmony');
+            }
+            window.print();
+        }
     </script>
 </body>
 </html>
